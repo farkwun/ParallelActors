@@ -7,25 +7,39 @@
 // included dependencies
 #include <vector>
 #include <string>
+#include "Actor.h"
 #include "Coordinate.h"
 
 //===================================
 // the class
 class Map {
   private: 
-    const char kObstacle;
-    const char kEmpty;
-    const char kActor;
-    const char kCOllision;
+    const static char kObstacle = 'O';
+    const static char kEmpty = ' ';
+    const static char kActor = 'A';
+    const static char kCollision = 'C';
+    const static int default_map_length = 100;
+    const static int default_map_width = 100;
+    const static int default_vision_radius = 10;
+    const static int default_actor_width = 10;
+    const static int default_actor_length = 10;
     std::vector< std::vector<char> > map;
-    int length;
-    int width;
+    int map_width;
+    int map_length;
+    int actor_width;
+    int actor_length;
     int vision_radius;
   public:
+    Map();
+    Map(std::vector< std::vector<char> > input_map);
+    void InitializeActorDimensions();
+    void InitializeActorDimensions(int in_actor_width, int in_actor_length);
+    void InitializeVision();
+    void set_vision_radius(int new_radius);
     void set_map(std::vector< std::vector<char> > new_map);
-    void AddActor(Coordinate coordinate);
-    void ClearActor(Coordinate coordinate);
-    void MoveActor(Coordinate orig_pos, Coordinate new_pos);
+    void AddActor(Actor actor);
+    void ClearActor(Actor actor);
+    void MoveActor(Actor actor, Coordinate new_pos);
     std::string GetSurroundings(Coordinate coordinate);
     Coordinate RandomEmptyLocation();
 };
