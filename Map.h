@@ -21,19 +21,19 @@ class Map {
     const static int default_map_length = 100;
     const static int default_map_width = 100;
     const static int default_vision_radius = 10;
-    const static int default_actor_width = 10;
-    const static int default_actor_length = 10;
+    const static int default_actor_half_width = 5;
+    const static int default_actor_half_length = 5;
     std::vector< std::vector<char> > map;
     int map_width;
     int map_length;
-    int actor_width;
-    int actor_length;
+    int actor_half_width;
+    int actor_half_length;
     int vision_radius;
   public:
     Map();
     Map(std::vector< std::vector<char> > input_map);
     void InitializeActorDimensions();
-    void InitializeActorDimensions(int in_actor_width, int in_actor_length);
+    void InitializeActorDimensions(int in_actor_half_width, int in_actor_half_length);
     void InitializeVision();
     void set_vision_radius(int new_radius);
     void set_map(std::vector< std::vector<char> > new_map);

@@ -11,13 +11,13 @@ Map::Map(std::vector< std::vector<char> > input_map){
 }
 
 void Map::InitializeActorDimensions(){
-  actor_width = default_actor_width;
-  actor_length = default_actor_length;
+  actor_half_width = default_actor_half_width;
+  actor_half_length = default_actor_half_length;
 }
 
-void Map::InitializeActorDimensions(int in_actor_width, int in_actor_length){
-  actor_width = in_actor_width;
-  actor_length = in_actor_length;
+void Map::InitializeActorDimensions(int in_actor_half_width, int in_actor_half_length){
+  actor_half_width = in_actor_half_width;
+  actor_half_length = in_actor_half_length;
 }
 
 void Map::InitializeVision(){
