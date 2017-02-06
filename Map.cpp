@@ -6,11 +6,15 @@ Map::Map(void){
   std::vector< std::vector<char> > default_map(default_map_rows, default_row);
   map_rows = default_map_rows;
   map_cols = default_map_cols;
+
+  map = default_map;
 }
 
 Map::Map(std::vector< std::vector<char> > input_map){
   map_rows = input_map.size();
   map_cols = input_map[0].size();
+
+  map = input_map;
 }
 
 void Map::InitializeActorDimensions(){
