@@ -161,6 +161,20 @@ bool Map::RandomEmptyLocationCases(int row, int col){
   }
 }
 
+Coordinate Map::RandomDestination(){
+  int row, col;
+  Coordinate destination;
+  std::default_random_engine engine;
+  std::uniform_int_distribution<int> distrRow(0, map_cols);
+  std::uniform_int_distribution<int> distrCol(0, map_rows);
+
+  row = distrRow(engine);
+  col = distrCol(engine);
+  destination.set_row_col(row, col);
+
+  return destination;
+}
+
 bool Map::IterateThroughActorDimensions(Coordinate coordinate, bool (Map::*f)(int, int)){
   int i, j, actor_row, actor_col;
   int left_edge, top_edge, right_edge, bottom_edge;

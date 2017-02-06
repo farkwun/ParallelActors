@@ -48,6 +48,7 @@ class Map {
     std::vector< std::vector<char> > GetSurroundings(Coordinate coordinate);
     bool out_of_bounds(int row, int col);
     Coordinate RandomEmptyLocation();
+    Coordinate RandomDestination();
     bool IterateThroughActorDimensions(Coordinate coordinate, bool (Map::*f)(int, int));
 };
 
