@@ -16,6 +16,10 @@ char Actor::get_collided(){
   return collided;
 }
 
+bool Actor::get_arrived(){
+  return arrived;
+}
+
 std::string Actor::get_id(){
   return id;
 }
@@ -34,6 +38,10 @@ void Actor::set_next_move(Coordinate new_next_move){
 
 void Actor::set_collided(char collision){
   collided = collision;
+}
+
+void Actor::set_arrived(bool arrival){
+  arrived = arrival;
 }
 
 void Actor::set_id(std::string new_id){

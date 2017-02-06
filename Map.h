@@ -14,10 +14,10 @@
 // the class
 class Map {
   private: 
-    const static char kObstacle = 'O';
-    const static char kEmpty = ' ';
-    const static char kActor = 'A';
-    const static char kCollision = 'C';
+    const static char kObstacle        = 'O';
+    const static char kEmpty           = ' ';
+    const static char kActor           = 'A';
+    const static char kCollision       = 'C';
     const static int default_map_cols = 300;
     const static int default_map_rows = 300;
     const static int default_vision_radius = 30;
@@ -45,6 +45,7 @@ class Map {
     void ClearActor(Actor actor);
     void MoveActor(Actor actor, Coordinate new_pos);
     void CheckCollision(Actor actor);
+    bool AtDestination(Actor actor);
     std::vector< std::vector<char> > GetSurroundings(Coordinate coordinate);
     bool out_of_bounds(int row, int col);
     Coordinate RandomEmptyLocation();

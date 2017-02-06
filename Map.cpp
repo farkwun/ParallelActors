@@ -88,6 +88,38 @@ bool Map::CheckCollisionCases(int row, int col){
   }
 }
 
+bool Map::AtDestination(Actor actor){
+  int actor_row, actor_col;
+  int actor_row_min, actor_row_max, actor_col_min, actor_col_max;
+  int dest_row, dest_col;
+  Coordinate position, destination;
+
+  position    = actor.get_position();
+  destination = actor.get_destination();
+
+  actor_row = position.get_row();
+  actor_col = position.get_col();
+
+  dest_row = destination.get_row();
+  dest_col = destination.get_col();
+
+  actor_row_min = actor_row - actor_half_rows;
+  actor_row_max = actor_row + actor_half_rows;
+
+  actor_col_min = actor_col - actor_half_cols;
+  actor_col_max = actor_col + actor_half_cols;
+
+  if (dest_row >= actor_row_min &&
+      dest_row <= actor_row_max &&
+      dest_col >= actor_col_min &&
+      dest_col <= actor_col_max
+      ){
+    actor.set_arrived(true);
+    return true;
+  }else{
+    return false;
+  }
+}
 
 std::vector< std::vector<char> > Map::GetSurroundings(Coordinate coordinate){
   int i, j, map_row, map_col;
