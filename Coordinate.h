@@ -5,12 +5,13 @@
 
 class Coordinate {
   private:
-    int x;
-    int y;
+    int row;
+    int col;
   public:
-    int get_x();
-    int get_y();
-    void set_x(int new_x);
-    void set_y(int new_y);
+    int get_row();
+    int get_col();
+    void set_row(int new_row);
+    void set_col(int new_col);
+    void set_row_col(int new_row, int new_col);
 };
 #endif /* COORDINATE_H */
