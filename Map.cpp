@@ -142,12 +142,12 @@ Coordinate Map::RandomEmptyLocation(){
   std::uniform_int_distribution<int> distrCol(0, map_rows);
   bool (Map::*cases)(int, int);
   cases = &Map::RandomEmptyLocationCases;
-  bool IsEmpty = false;
-  while (!IsEmpty){
+  bool IsOccupied = true;
+  while (IsOccupied){
     row = distrRow(engine);
     col = distrCol(engine);
     test_coordinate.set_row_col(row, col);
-    IsEmpty = IterateThroughActorDimensions(test_coordinate, cases);
+    IsOccupied = IterateThroughActorDimensions(test_coordinate, cases);
   }
   return test_coordinate;
 }
