@@ -182,4 +182,5 @@ bool Map::IterateThroughActorDimensions(Coordinate coordinate, bool (Map::*f)(in
       }
     }
   }
+  return break_out;
 }
