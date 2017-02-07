@@ -52,7 +52,7 @@ bzero(&(server_addr.sin_zero),8);
    {
 
     printf("Type Something (q or Q to quit):");
-    gets(send_data);
+    fgets(send_data, 1024, stdin);
 
     if ((strcmp(send_data , "q") == 0) || strcmp(send_data , "Q") == 0)
        break;
