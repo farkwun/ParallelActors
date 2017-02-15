@@ -7,11 +7,13 @@
 // included dependencies
 #include <string>
 #include "Coordinate.h"
+#include <netinet/in.h>
 
 //===================================
 // the class
 class Actor {
   private: 
+    struct sockaddr_in address;
     Coordinate position;
     Coordinate destination;
     Coordinate next_move;
@@ -20,6 +22,8 @@ class Actor {
     bool collided = false;
     std::string id;
   public:
+    Actor(std::string id, Coordinate position, Coordinate destination, struct sockaddr_in sock_addr);
+    struct sockaddr_in get_address();
     Coordinate get_position();
     Coordinate get_destination();
     Coordinate get_next_move();

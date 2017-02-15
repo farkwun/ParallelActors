@@ -1,5 +1,12 @@
 #include "Actor.h"
 
+Actor::Actor(std::string id, Coordinate position, Coordinate destination, struct sockaddr_in sock_addr){
+  this->address     = sock_addr;
+  this->position    = position;
+  this->destination = destination;
+  this->id          = id;
+}
+
 Coordinate Actor::get_position(){
   return position;
 }
