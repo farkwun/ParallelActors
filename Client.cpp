@@ -1,3 +1,7 @@
+/* udpclient.c */
+// Copied from http://www.pythonprasanna.com/Papers%20and%20Articles/Sockets/udpclient.c
+//
+// Sourced from http://www.prasannatech.net/2008/07/socket-programming-tutorial.html
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
