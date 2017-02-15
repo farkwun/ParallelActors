@@ -12,11 +12,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include<unordered_map>
-#include<string>
-#include<iostream>
+#include <unordered_map>
+#include <string>
+#include <iostream>
 
 const static int ID_LEN = 10;
+const static int BUFLEN = 1024;
 
 std::string generate_id(){
   char new_id[ID_LEN + 1];
@@ -41,7 +42,7 @@ int main(int argc, char *argv[])
   int sock;
   int bytes_read;
   socklen_t addr_len;
-  char recv_data[1024];
+  char recv_data[BUFLEN];
   const char *service = "3000";
   struct sockaddr_in server_addr , client_addr;
 
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
   while (1)
   {
 
-    bytes_read = recvfrom(sock,recv_data,1024,0,
+    bytes_read = recvfrom(sock,recv_data,BUFLEN,0,
         (struct sockaddr *)&client_addr, &addr_len);
 
 
