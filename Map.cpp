@@ -106,7 +106,7 @@ void Map::CheckCollision(Actor actor){
   cases = &Map::CheckCollisionCases;
   collision = IterateThroughActorDimensions(actor.get_position(), cases);
   if (collision){
-    actor.set_collided(kCollision);
+    actor.set_collided(true);
   }
 }
 

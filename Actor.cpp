@@ -12,7 +12,7 @@ Coordinate Actor::get_next_move(){
   return next_move;
 }
 
-char Actor::get_collided(){
+bool Actor::get_collided(){
   return collided;
 }
 
@@ -40,7 +40,7 @@ void Actor::set_next_move(Coordinate new_next_move){
   next_move = new_next_move;
 }
 
-void Actor::set_collided(char collision){
+void Actor::set_collided(bool collision){
   collided = collision;
 }
 
