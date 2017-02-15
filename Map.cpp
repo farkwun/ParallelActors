@@ -31,6 +31,14 @@ void Map::InitializeVision(){
   vision_radius = default_vision_radius;
 }
 
+void Map::InitializeStepSize(){
+  step_size = actor_half_rows + actor_half_cols;
+}
+
+void Map::set_step_size(int new_step_size){
+  step_size = new_step_size;
+}
+
 void Map::set_vision_radius(int new_radius){
   vision_radius = new_radius;
 }
@@ -65,9 +73,31 @@ bool Map::ClearActorCases(int row, int col){
   return false;
 }
 
+bool Map::IsValidStep(Coordinate old_pos, Coordinate new_pos){
+  int manhattan_distance;
+  bool step_validity = false;
+
+  manhattan_distance = abs(new_pos.get_row() - old_pos.get_row()) +
+     abs(new_pos.get_col() - old_pos.get_col());
+
+  if (manhattan_distance <= step_size){
+    step_validity = true;
+  }else{
+    step_validity = false;
+  }
+
+  return step_validity;
+}
+
 void Map::MoveActor(Actor actor, Coordinate new_pos){
-  actor.set_position(new_pos);
-  AddActor(actor);
+  if(IsValidStep(actor.get_position(), new_pos)){
+    actor.set_invalid_move(false);
+    ClearActor(actor);
+    actor.set_position(new_pos);
+    AddActor(actor);
+  }else{
+    actor.set_invalid_move(true);
+  }
 }
 
 void Map::CheckCollision(Actor actor){
@@ -113,7 +143,7 @@ bool Map::AtDestination(Actor actor){
       dest_row <= actor_row_max &&
       dest_col >= actor_col_min &&
       dest_col <= actor_col_max
-      ){
+     ){
     actor.set_arrived(true);
     return true;
   }else{

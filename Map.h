@@ -29,16 +29,20 @@ class Map {
     int actor_half_rows;
     int actor_half_cols;
     int vision_radius;
+    int step_size;
     bool AddActorCases(int row, int col);
     bool ClearActorCases(int row, int col);
     bool CheckCollisionCases(int row, int col);
     bool RandomEmptyLocationCases(int row, int col);
+    bool IsValidStep(Coordinate old_pos, Coordinate new_pos);
   public:
     Map();
     Map(std::vector< std::vector<char> > input_map);
     void InitializeActorDimensions();
     void InitializeActorDimensions(int in_actor_half_rows, int in_actor_half_cols);
     void InitializeVision();
+    void InitializeStepSize();
+    void set_step_size(int new_step_size);
     void set_vision_radius(int new_radius);
     void set_map(std::vector< std::vector<char> > new_map);
     void AddActor(Actor actor);

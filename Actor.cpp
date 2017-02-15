@@ -20,6 +20,10 @@ bool Actor::get_arrived(){
   return arrived;
 }
 
+bool Actor::get_invalid_move(){
+  return invalid_move;
+}
+
 std::string Actor::get_id(){
   return id;
 }
@@ -42,6 +46,10 @@ void Actor::set_collided(char collision){
 
 void Actor::set_arrived(bool arrival){
   arrived = arrival;
+}
+
+void Actor::set_invalid_move(bool invalid){
+  invalid_move = invalid;
 }
 
 void Actor::set_id(std::string new_id){
