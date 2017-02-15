@@ -13,6 +13,28 @@
 #include <stdlib.h>
 
 #include<unordered_map>
+#include<string>
+#include<iostream>
+
+const static int ID_LEN = 10;
+
+std::string generate_id(){
+  char new_id[ID_LEN + 1];
+
+  static const char alphanum[] =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+
+  for (int i = 0; i < ID_LEN; i++){
+    new_id[i] = alphanum[rand() % (sizeof(alphanum)-1)];
+  }
+
+  new_id[ID_LEN] = '\0';
+
+  std::string output_id(new_id);
+  return output_id;
+}
 
 int main(int argc, char *argv[])
 {
@@ -53,9 +75,13 @@ int main(int argc, char *argv[])
 
   addr_len = sizeof(struct sockaddr);
 
+  // initialize seed for rand()
+  srand(time(0));
+
   printf("\nUDPServer Waiting for client on port ");
   printf(service);
   fflush(stdout);
+
 
   while (1)
   {
