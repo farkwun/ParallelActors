@@ -15,7 +15,7 @@
 class Map {
   private: 
     const static char kObstacle        = 'O';
-    const static char kEmpty           = ' ';
+    const static char kEmpty           = 'E';
     const static char kActor           = 'A';
     const static char kCollision       = 'C';
     const static int default_map_cols = 300;
