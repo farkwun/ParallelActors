@@ -1,5 +1,10 @@
 #include "Coordinate.h"
 
+Coordinate::Coordinate(){
+  row = -1;
+  col = -1;
+}
+
 int Coordinate::get_row(){
   return row;
 }

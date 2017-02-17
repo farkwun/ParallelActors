@@ -8,6 +8,7 @@ class Coordinate {
     int row;
     int col;
   public:
+    Coordinate();
     int get_row();
     int get_col();
     void set_row(int new_row);
