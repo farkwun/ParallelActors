@@ -15,11 +15,27 @@
 #include <unordered_map>
 #include <string>
 #include <iostream>
+#include "Map.h"
+#include "PDUConstants.h"
+#include "Actor.h"
+#include <pthread.h>
 
-const static int ID_LEN = 10;
-const static int BUFLEN = 1024;
+int sock;
+struct sockaddr_in server_addr , client_addr;
+int bytes_read;
+socklen_t addr_len;
 
-std::string generate_id(){
+char recvBuff[BUFLEN];
+char PDU_TYPE;
+char PDU_ID[ID_LEN + 1];
+char PDU_DATA[DATALEN];
+
+std::unordered_map<std::string, Actor> current_actors;
+std::unordered_map<std::string, struct sockaddr_in> new_actors;
+
+Map map;
+
+std::string GenerateID(){
   char new_id[ID_LEN + 1];
 
   static const char alphanum[] =
@@ -37,14 +53,122 @@ std::string generate_id(){
   return output_id;
 }
 
+void print_map_segment(std::vector< std::vector<char> > segment){
+  int rows = segment.size();
+  int cols = segment[0].size();
+  for (int i = 0; i < rows; i++){
+    for (int j = 0; j < cols; j++){
+      std::cout << segment[i][j];
+    }
+  }
+}
+
+void SendPDU(char * PDU, struct sockaddr_in in_address){
+  sendto(sock, PDU, BUFLEN, 0,
+      (struct sockaddr *)&in_address, sizeof(in_address));
+}
+
+void RegisterNewActor(struct sockaddr_in address){
+  std::string new_id;
+  bool already_exists = true;
+
+  while(already_exists){
+    new_id = GenerateID();
+    if (current_actors.count(new_id) == 0
+        && new_actors.count(new_id)  == 0){
+      already_exists = false;
+    }
+  }
+
+  new_actors[new_id] = address;
+}
+
+char * SetupPDU(Actor actor){
+  char * PDU;
+  PDU = (char *) malloc(BUFLEN);
+  // fill PDU with null characters
+  memset(&PDU[0], 0, sizeof(PDU));
+
+  // assigning PDU type
+  PDU[0] = SETUP;
+
+  // assigning ID
+  strncpy(PDU + PDU_ID_INDEX, actor.get_id().c_str(), ID_LEN);
+
+  // exchange vision radius
+  sprintf(PDU + SETUP_VISION_INDEX,"%d",map.get_total_surroundings_grid_size());
+
+  // exchange step size
+  sprintf(PDU + SETUP_STEP_INDEX,"%d",map.get_step_size());
+
+  // current actor row
+  sprintf(PDU + SETUP_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
+
+  // current actor col
+  sprintf(PDU + SETUP_CURR_COL_INDEX,"%d",actor.get_position().get_col());
+
+  // destination row
+  sprintf(PDU + SETUP_DEST_ROW_INDEX,"%d",actor.get_destination().get_row());
+
+  // destination col
+  sprintf(PDU + SETUP_DEST_COL_INDEX,"%d",actor.get_destination().get_col());
+
+  return PDU;
+}
+
+void AddNewActors(){
+  std::string new_actor_id;
+  struct sockaddr_in new_actor_address;
+  // create a copy of new_actors - this allows new actors
+  // to be added to the list while addition is occurring
+  std::unordered_map<std::string, struct sockaddr_in> temp(new_actors);
+  std::unordered_map<std::string, struct sockaddr_in>::iterator it = temp.begin();
+  while(it != temp.end()){
+    new_actor_id      = it->first;
+    new_actor_address = it->second;
+    // create a new Actor object
+    Actor new_actor = Actor(new_actor_id, map.RandomEmptyLocation(),
+        map.RandomDestination(), new_actor_address);
+    // add the new Actor to the map -- should be guaranteed no collision
+    map.AddActor(new_actor);
+    // add the new Actor to the currently active Actors
+    current_actors[new_actor_id] = new_actor;
+    // Send a SETUP PDU to the client
+    SendPDU(SetupPDU(new_actor), new_actor.get_address());
+    // erase the key-value pair in new_actors
+    new_actors.erase(new_actor_id);
+    it++;
+  }
+}
+
+void ParseRecvdPDU(){
+  bytes_read = recvfrom(sock,recvBuff,BUFLEN,0,
+      (struct sockaddr *)&client_addr, &addr_len);
+  PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
+  switch(PDU_TYPE){
+    case REGISTER :
+      RegisterNewActor(client_addr);
+      break;
+    default:
+      break;
+  }
+}
+
+void *ReceiveManager(void *args){
+  while(1){
+    ParseRecvdPDU();
+  }
+}
+
+void *MapManager(void *args){
+  while(1){
+  }
+}
+
 int main(int argc, char *argv[])
 {
-  int sock;
-  int bytes_read;
-  socklen_t addr_len;
   char recv_data[BUFLEN];
   const char *service = "3000";
-  struct sockaddr_in server_addr , client_addr;
 
   if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
     perror("Socket");
