@@ -28,11 +28,16 @@ void Map::InitializeActorDimensions(int in_actor_half_rows, int in_actor_half_co
 }
 
 void Map::InitializeVision(){
+  int side_length;
+
   vision_radius = default_vision_radius;
+
+  side_length = ((vision_radius*2)+1);
+  total_surroundings_grid_size  = side_length * side_length;
 }
 
 void Map::InitializeStepSize(){
-  step_size = actor_half_rows + actor_half_cols;
+  step_size = 1;
 }
 
 void Map::set_step_size(int new_step_size){
@@ -40,7 +45,19 @@ void Map::set_step_size(int new_step_size){
 }
 
 void Map::set_vision_radius(int new_radius){
+  int side_length;
   vision_radius = new_radius;
+
+  side_length = ((vision_radius*2)+1);
+  total_surroundings_grid_size  = side_length * side_length;
+}
+
+int Map::get_total_surroundings_grid_size(){
+  return total_surroundings_grid_size;
+}
+
+int Map::get_step_size(){
+  return step_size;
 }
 
 void Map::set_map(std::vector< std::vector<char> > new_map){

@@ -14,21 +14,22 @@
 // the class
 class Map {
   private: 
-    const static char kObstacle        = 'O';
-    const static char kEmpty           = 'E';
-    const static char kActor           = 'A';
-    const static char kCollision       = 'C';
+    const char kObstacle        = 'O';
+    const char kEmpty           = 'E';
+    const char kActor           = 'A';
+    const char kCollision       = 'C';
     const static int default_map_cols = 300;
     const static int default_map_rows = 300;
-    const static int default_vision_radius = 30;
-    const static int default_actor_half_rows = 5;
-    const static int default_actor_half_cols = 5;
+    const static int default_vision_radius = 5;
+    const static int default_actor_half_rows = 2;
+    const static int default_actor_half_cols = 2;
     std::vector< std::vector<char> > map;
     int map_rows;
     int map_cols;
     int actor_half_rows;
     int actor_half_cols;
     int vision_radius;
+    int total_surroundings_grid_size;
     int step_size;
     bool AddActorCases(int row, int col);
     bool ClearActorCases(int row, int col);
@@ -44,6 +45,8 @@ class Map {
     void InitializeStepSize();
     void set_step_size(int new_step_size);
     void set_vision_radius(int new_radius);
+    int  get_total_surroundings_grid_size();
+    int  get_step_size();
     void set_map(std::vector< std::vector<char> > new_map);
     void AddActor(Actor actor);
     void ClearActor(Actor actor);
