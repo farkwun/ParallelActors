@@ -15,7 +15,7 @@ Map.o: Map.h Map.cpp
 	${CPP} -c ${CFLAGS} Map.h Map.cpp
 
 server: Server.cpp
-	${CPP} ${CFLAGS} Server.cpp -o server
+	${CPP} ${CFLAGS} Server.cpp Map.cpp Actor.cpp Coordinate.cpp -o server
 
 client: Client.cpp
 	${CPP} ${CFLAGS} Client.cpp -o client
