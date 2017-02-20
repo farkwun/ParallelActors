@@ -7,6 +7,7 @@
 // included dependencies
 #include <vector>
 #include <string>
+#include <random>
 #include "Actor.h"
 #include "Coordinate.h"
 
@@ -24,6 +25,7 @@ class Map {
     const static int default_actor_half_rows = 2;
     const static int default_actor_half_cols = 2;
     std::vector< std::vector<char> > map;
+    std::default_random_engine engine;
     int map_rows;
     int map_cols;
     int actor_half_rows;
@@ -31,6 +33,7 @@ class Map {
     int vision_radius;
     int total_surroundings_grid_size;
     int step_size;
+    void seed_engine();
     bool AddActorCases(int row, int col);
     bool ClearActorCases(int row, int col);
     bool CheckCollisionCases(int row, int col);

@@ -7,6 +7,8 @@ Map::Map(void){
   map_rows = default_map_rows;
   map_cols = default_map_cols;
 
+  seed_engine();
+
   map = default_map;
 }
 
@@ -14,7 +16,13 @@ Map::Map(std::vector< std::vector<char> > input_map){
   map_rows = input_map.size();
   map_cols = input_map[0].size();
 
+  seed_engine();
+
   map = input_map;
+}
+
+void Map::seed_engine(){
+  engine.seed(std::random_device{}());
 }
 
 void Map::InitializeActorDimensions(){
@@ -220,7 +228,6 @@ bool Map::out_of_bounds(int row, int col){
 Coordinate Map::RandomEmptyLocation(){
   int row, col;
   Coordinate test_coordinate;
-  std::default_random_engine engine;
   std::uniform_int_distribution<int> distrRow(0, map_cols);
   std::uniform_int_distribution<int> distrCol(0, map_rows);
   bool (Map::*cases)(int, int);
@@ -250,7 +257,6 @@ bool Map::RandomEmptyLocationCases(int row, int col){
 Coordinate Map::RandomDestination(){
   int row, col;
   Coordinate destination;
-  std::default_random_engine engine;
   std::uniform_int_distribution<int> distrRow(0, map_cols);
   std::uniform_int_distribution<int> distrCol(0, map_rows);
 
