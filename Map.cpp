@@ -236,6 +236,9 @@ Coordinate Map::RandomEmptyLocation(){
 }
 
 bool Map::RandomEmptyLocationCases(int row, int col){
+  if (out_of_bounds(row, col)){
+    return true;
+  }
   if (map[row][col] == kEmpty){
     return false;
   }
