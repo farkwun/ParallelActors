@@ -25,6 +25,9 @@ struct sockaddr_in server_addr , client_addr;
 int bytes_read;
 socklen_t addr_len;
 
+pthread_t receive_manager_id;
+pthread_t map_manager_id;
+
 char recvBuff[BUFLEN];
 char PDU_TYPE;
 char PDU_ID[ID_LEN + 1];
@@ -83,60 +86,67 @@ void RegisterNewActor(struct sockaddr_in address){
   new_actors[new_id] = address;
 }
 
+// builds a Setup PDU for a given actor
 char * SetupPDU(Actor actor){
   char * PDU;
   PDU = (char *) malloc(BUFLEN);
   // fill PDU with null characters
   memset(&PDU[0], 0, sizeof(PDU));
 
-  // assigning PDU type
+  // fill PDU fields - type, ID, vision_size, step_size, position, destination
   PDU[0] = SETUP;
 
-  // assigning ID
   strncpy(PDU + PDU_ID_INDEX, actor.get_id().c_str(), ID_LEN);
 
-  // exchange vision radius
   sprintf(PDU + SETUP_VISION_INDEX,"%d",map.get_total_surroundings_grid_size());
 
-  // exchange step size
   sprintf(PDU + SETUP_STEP_INDEX,"%d",map.get_step_size());
 
-  // current actor row
   sprintf(PDU + SETUP_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
 
-  // current actor col
   sprintf(PDU + SETUP_CURR_COL_INDEX,"%d",actor.get_position().get_col());
 
-  // destination row
   sprintf(PDU + SETUP_DEST_ROW_INDEX,"%d",actor.get_destination().get_row());
 
-  // destination col
   sprintf(PDU + SETUP_DEST_COL_INDEX,"%d",actor.get_destination().get_col());
 
   return PDU;
 }
 
+void InitializeMap(){
+  map.InitializeActorDimensions();
+  map.InitializeVision();
+  map.InitializeStepSize();
+}
+
+// moves waiting actors to current list
 void AddNewActors(){
+  if (new_actors.empty()){
+    return;
+  }
+
   std::string new_actor_id;
   struct sockaddr_in new_actor_address;
-  // create a copy of new_actors - this allows new actors
-  // to be added to the list while addition is occurring
   std::unordered_map<std::string, struct sockaddr_in> temp(new_actors);
-  std::unordered_map<std::string, struct sockaddr_in>::iterator it = temp.begin();
+  std::unordered_map<std::string, struct sockaddr_in>::iterator it;
+
+  it = temp.begin();
+
   while(it != temp.end()){
     new_actor_id      = it->first;
     new_actor_address = it->second;
-    // create a new Actor object
-    Actor new_actor = Actor(new_actor_id, map.RandomEmptyLocation(),
+
+    Actor new_actor(new_actor_id, map.RandomEmptyLocation(),
         map.RandomDestination(), new_actor_address);
-    // add the new Actor to the map -- should be guaranteed no collision
+
     map.AddActor(new_actor);
-    // add the new Actor to the currently active Actors
+
     current_actors[new_actor_id] = new_actor;
-    // Send a SETUP PDU to the client
+
     SendPDU(SetupPDU(new_actor), new_actor.get_address());
-    // erase the key-value pair in new_actors
+
     new_actors.erase(new_actor_id);
+
     it++;
   }
 }
@@ -145,6 +155,10 @@ void ParseRecvdPDU(){
   bytes_read = recvfrom(sock,recvBuff,BUFLEN,0,
       (struct sockaddr *)&client_addr, &addr_len);
   PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
+  for (int i = 0; i < BUFLEN; i++){
+    std::cout << recvBuff[i];
+  }
+  std::cout << std::endl;
   switch(PDU_TYPE){
     case REGISTER :
       RegisterNewActor(client_addr);
@@ -155,13 +169,32 @@ void ParseRecvdPDU(){
 }
 
 void *ReceiveManager(void *args){
+  printf("\nIn Receive Manager\n");
   while(1){
     ParseRecvdPDU();
   }
 }
 
+void MoveActors();
+void DetectCollisions();
+void CheckDestinations();
+void SendUpdates();
+
 void *MapManager(void *args){
+  int time_step = 1000000;
+  int count = 0;
+  printf("\nIn Map Manager\n");
   while(1){
+    if (count == time_step){
+      AddNewActors();
+      /*    MoveActors();
+            DetectCollisions();
+            CheckDestinations();
+            AddNewActors();
+            SendUpdates();*/
+      count = 0;
+    }
+    count++;
   }
 }
 
@@ -207,6 +240,18 @@ int main(int argc, char *argv[])
   printf(service);
   fflush(stdout);
 
+  InitializeMap();
+
+
+  pthread_create(&receive_manager_id, NULL, &ReceiveManager, NULL);
+  pthread_create(&map_manager_id, NULL, &MapManager, NULL);
+
+  while(1){
+    sleep(1);
+  }
+
+
+  printf("Should never get here");
 
   while (1)
   {

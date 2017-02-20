@@ -13,14 +13,19 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "PDUConstants.h"
+#include <iostream>
+
 int main(int argc, char *argv[])
 {
 int sock;
+int bytes_read;
 struct sockaddr_in server_addr;
 struct hostent *host;
 const char *input_host = "localhost";
 const char *service = "3000";
-char send_data[1024];
+char recv_data[BUFLEN];
+char send_data[BUFLEN];
 
 switch (argc) {
   case 1:
@@ -52,19 +57,38 @@ server_addr.sin_port = htons((u_short)atoi(service));
 server_addr.sin_addr = *((struct in_addr *)host->h_addr);
 bzero(&(server_addr.sin_zero),8);
 
+
    while (1)
    {
 
-    printf("Type Something (q or Q to quit):");
-    fgets(send_data, 1024, stdin);
+    //printf("Type Something (q or Q to quit):");
+    //fgets(send_data, 1024, stdin);
+    //
+    send_data[0] = REGISTER;
 
-    if ((strcmp(send_data , "q") == 0) || strcmp(send_data , "Q") == 0)
+      sendto(sock, send_data, strlen(send_data), 0,
+          (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+    /*if ((strcmp(send_data , "q") == 0) || strcmp(send_data , "Q") == 0){
        break;
+    }
+    else{
+      sendto(sock, send_data, strlen(send_data), 0,
+          (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+    }*/
 
-    else
-       sendto(sock, send_data, strlen(send_data), 0,
-              (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-     
+    while(1){
+      printf("In Receive loop\n");
+      bytes_read = recvfrom(sock, recv_data, BUFLEN, 0,
+          (struct sockaddr *)&server_addr, (unsigned int*)sizeof(server_addr));
+      for (int i = 0; i < BUFLEN; i++){
+        if (recv_data[i] == '\0'){
+        std::cout << ' ';
+        }else{
+        std::cout << recv_data[i];
+        }
+      }
+      std::cout << std::endl;
+    }
    }
 
 }
