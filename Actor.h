@@ -39,6 +39,7 @@ class Actor {
     void set_arrived(bool arrival);
     void set_invalid_move(bool invalid);
     void set_id(std::string new_id);
+    void print();
 };
 
 #endif /* ACTOR_H */

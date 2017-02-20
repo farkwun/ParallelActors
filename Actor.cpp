@@ -1,4 +1,5 @@
 #include "Actor.h"
+#include <iostream>
 
 Actor::Actor(){
   Coordinate coordinate;
@@ -75,4 +76,16 @@ void Actor::set_invalid_move(bool invalid){
 
 void Actor::set_id(std::string new_id){
   id = new_id;
+}
+
+void Actor::print(){
+  std::cout << std::boolalpha;
+  std::cout << "Actor information for ID: " << id << std::endl;
+  std::cout << "Position: " << position.to_str() << std::endl;
+  std::cout << "Destination: " << destination.to_str() << std::endl;
+  std::cout << "Next Move: " << next_move.to_str() << std::endl;
+  std::cout << "Actor Arrived - " << arrived << std::endl;
+  std::cout << "Actor Collided - " << collided << std::endl;
+  std::cout << "Next Move Invalid - " << invalid_move << std::endl;
+  std::cout << std::endl;
 }
