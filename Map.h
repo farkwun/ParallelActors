@@ -47,6 +47,7 @@ class Map {
     void set_vision_radius(int new_radius);
     int  get_total_surroundings_grid_size();
     int  get_step_size();
+    std::vector< std::vector<char> > get_map();
     void set_map(std::vector< std::vector<char> > new_map);
     void AddActor(Actor actor);
     void ClearActor(Actor actor);

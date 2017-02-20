@@ -52,6 +52,10 @@ void Map::set_vision_radius(int new_radius){
   total_surroundings_grid_size  = side_length * side_length;
 }
 
+std::vector< std::vector<char> > Map::get_map(){
+  return map;
+}
+
 int Map::get_total_surroundings_grid_size(){
   return total_surroundings_grid_size;
 }
@@ -269,7 +273,7 @@ bool Map::IterateThroughActorDimensions(Coordinate coordinate, bool (Map::*f)(in
 
   for (i = top_edge; i <= bottom_edge; i++){
     for (j = left_edge; j <= right_edge; j++){
-      break_out = (*this.*f)(i, j);
+      break_out = (this->*f)(i, j);
       if(break_out){
         return break_out;
       }
