@@ -24,9 +24,31 @@ int vision_grid_size;
 int step_size;
 std::string id;
 
-std::string GetSetupField(int start, char * fields){
-  char field_array[SETUP_FIELD_LEN];
-  int end = start + SETUP_FIELD_LEN;
+int sequence;
+bool collided = false;
+bool arrived  = false;
+bool timeout  = false;
+char * vision;
+
+bool IsRightSequence(char sequence_num){
+  if ((int)sequence_num == sequence){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+bool IsTrueChar(char boolean){
+  if (boolean == TRUE){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+std::string GetField(int start, char * fields, int field_len){
+  char field_array[field_len];
+  int end = start + field_len;
 
   std::copy(fields + start, fields + end, field_array);
 
@@ -53,13 +75,22 @@ void ParseServerPDU(char * PDU){
 
   switch(PDU_type){
     case SETUP :
-      id = GetSetupField(PDU_ID_INDEX, PDU);
-      vision_grid_size = StoI(GetSetupField(SETUP_VISION_INDEX, PDU));
-      step_size = StoI(GetSetupField(SETUP_STEP_INDEX, PDU));
-      position.set_row(StoI(GetSetupField(SETUP_CURR_ROW_INDEX, PDU)));
-      position.set_col(StoI(GetSetupField(SETUP_CURR_COL_INDEX, PDU)));
-      destination.set_row(StoI(GetSetupField(SETUP_DEST_ROW_INDEX, PDU)));
-      destination.set_col(StoI(GetSetupField(SETUP_DEST_COL_INDEX, PDU)));
+      id = GetField(PDU_ID_INDEX, PDU, SETUP_FIELD_LEN);
+      vision_grid_size = StoI(GetField(SETUP_VISION_INDEX, PDU, SETUP_FIELD_LEN));
+      step_size = StoI(GetField(SETUP_STEP_INDEX, PDU, SETUP_FIELD_LEN));
+      position.set_row(StoI(GetField(SETUP_CURR_ROW_INDEX, PDU, SETUP_FIELD_LEN)));
+      position.set_col(StoI(GetField(SETUP_CURR_COL_INDEX, PDU, SETUP_FIELD_LEN)));
+      destination.set_row(StoI(GetField(SETUP_DEST_ROW_INDEX, PDU, SETUP_FIELD_LEN)));
+      destination.set_col(StoI(GetField(SETUP_DEST_COL_INDEX, PDU, SETUP_FIELD_LEN)));
+      break;
+    case VISION :
+      collided = IsTrueChar(PDU[VISION_COLLIDED_INDEX]);
+      arrived  = IsTrueChar(PDU[VISION_ARRIVED_INDEX]);
+      timeout  = IsTrueChar(PDU[VISION_TIMEOUT_INDEX]);
+      position.set_row(StoI(GetField(VISION_CURR_ROW_INDEX, PDU, SETUP_FIELD_LEN)));
+      position.set_col(StoI(GetField(VISION_CURR_COL_INDEX, PDU, SETUP_FIELD_LEN)));
+      std::copy(PDU + VISION_GRID_INDEX,
+          PDU + VISION_GRID_INDEX + vision_grid_size, vision);
       break;
     default :
       break;
@@ -68,63 +99,63 @@ void ParseServerPDU(char * PDU){
 
 int main(int argc, char *argv[])
 {
-int sock;
-int bytes_read;
-struct sockaddr_in server_addr;
-struct hostent *host;
-const char *input_host = "localhost";
-const char *service = "3000";
-char recv_data[BUFLEN];
-char send_data[BUFLEN];
+  int sock;
+  int bytes_read;
+  struct sockaddr_in server_addr;
+  struct hostent *host;
+  const char *input_host = "localhost";
+  const char *service = "3000";
+  char recv_data[BUFLEN];
+  char send_data[BUFLEN];
 
-switch (argc) {
-  case 1:
-    input_host = "localhost";
-    break;
-  case 3:
-    service = argv[2];
-    /* FALL THROUGH */
-    break;
-  case 2:
-    input_host = argv[1];
-    break;
-  default:
-    fprintf(stderr, "usage: udpclient [host [port]]\n");
+  switch (argc) {
+    case 1:
+      input_host = "localhost";
+      break;
+    case 3:
+      service = argv[2];
+      /* FALL THROUGH */
+      break;
+    case 2:
+      input_host = argv[1];
+      break;
+    default:
+      fprintf(stderr, "usage: udpclient [host [port]]\n");
+      exit(1);
+  }
+
+  host= (struct hostent *) gethostbyname(input_host);
+
+
+  if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+  {
+    perror("socket");
     exit(1);
-}
+  }
 
-host= (struct hostent *) gethostbyname(input_host);
-
-
-if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-{
-perror("socket");
-exit(1);
-}
-
-server_addr.sin_family = AF_INET;
-server_addr.sin_port = htons((u_short)atoi(service));
-server_addr.sin_addr = *((struct in_addr *)host->h_addr);
-bzero(&(server_addr.sin_zero),8);
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons((u_short)atoi(service));
+  server_addr.sin_addr = *((struct in_addr *)host->h_addr);
+  bzero(&(server_addr.sin_zero),8);
 
 
-   while (1)
-   {
+  while (1)
+  {
 
     //printf("Type Something (q or Q to quit):");
     //fgets(send_data, 1024, stdin);
     //
     send_data[0] = REGISTER;
 
-      sendto(sock, send_data, strlen(send_data), 0,
-          (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+    sendto(sock, send_data, strlen(send_data), 0,
+        (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
     /*if ((strcmp(send_data , "q") == 0) || strcmp(send_data , "Q") == 0){
-       break;
-    }
-    else{
+      break;
+      }
+      else{
       sendto(sock, send_data, strlen(send_data), 0,
-          (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-    }*/
+      (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+      }*/
 
     while(1){
       printf("In Receive loop\n");
@@ -132,6 +163,6 @@ bzero(&(server_addr.sin_zero),8);
           (struct sockaddr *)&server_addr, (unsigned int*)sizeof(server_addr));
       ParseServerPDU(recv_data);
     }
-   }
+  }
 
 }
