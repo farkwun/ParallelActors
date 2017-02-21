@@ -18,7 +18,7 @@
 #include <iostream>
 #include <string>
 
-Coordinate current_position;
+Coordinate position;
 Coordinate destination;
 int vision_grid_size;
 int step_size;
@@ -44,7 +44,7 @@ void PrintAttributes(){
   std::cout << "ID : " << id << std::endl;
   std::cout << "Vision grid size : " << vision_grid_size << std::endl;
   std::cout << "Step size : " << step_size << std::endl;
-  std::cout << "Position : " << current_position.to_str() << std::endl;
+  std::cout << "Position : " << position.to_str() << std::endl;
   std::cout << "Destination : " << destination.to_str() << std::endl;
 }
 
@@ -56,8 +56,8 @@ void ParseServerPDU(char * PDU){
       id = GetSetupField(PDU_ID_INDEX, PDU);
       vision_grid_size = StoI(GetSetupField(SETUP_VISION_INDEX, PDU));
       step_size = StoI(GetSetupField(SETUP_STEP_INDEX, PDU));
-      current_position.set_row(StoI(GetSetupField(SETUP_CURR_ROW_INDEX, PDU)));
-      current_position.set_col(StoI(GetSetupField(SETUP_CURR_COL_INDEX, PDU)));
+      position.set_row(StoI(GetSetupField(SETUP_CURR_ROW_INDEX, PDU)));
+      position.set_col(StoI(GetSetupField(SETUP_CURR_COL_INDEX, PDU)));
       destination.set_row(StoI(GetSetupField(SETUP_DEST_ROW_INDEX, PDU)));
       destination.set_col(StoI(GetSetupField(SETUP_DEST_COL_INDEX, PDU)));
       break;
