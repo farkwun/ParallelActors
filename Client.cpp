@@ -14,7 +14,57 @@
 #include <stdlib.h>
 
 #include "PDUConstants.h"
+#include "Coordinate.h"
 #include <iostream>
+#include <string>
+
+Coordinate current_position;
+Coordinate destination;
+int vision_grid_size;
+int step_size;
+std::string id;
+
+std::string GetSetupField(int start, char * fields){
+  char field_array[SETUP_FIELD_LEN];
+  int end = start + SETUP_FIELD_LEN;
+
+  std::copy(fields + start, fields + end, field_array);
+
+  std::string field(field_array);
+
+  return field;
+}
+
+int StoI(std::string number){
+  return std::stoi(number, nullptr, 10);
+}
+
+void PrintAttributes(){
+  std::cout << "My attributes are... " << std::endl;
+  std::cout << "ID : " << id << std::endl;
+  std::cout << "Vision grid size : " << vision_grid_size << std::endl;
+  std::cout << "Step size : " << step_size << std::endl;
+  std::cout << "Position : " << current_position.to_str() << std::endl;
+  std::cout << "Destination : " << destination.to_str() << std::endl;
+}
+
+void ParseServerPDU(char * PDU){
+  char PDU_type = PDU[PDU_TYPE_INDEX];
+
+  switch(PDU_type){
+    case SETUP :
+      id = GetSetupField(PDU_ID_INDEX, PDU);
+      vision_grid_size = StoI(GetSetupField(SETUP_VISION_INDEX, PDU));
+      step_size = StoI(GetSetupField(SETUP_STEP_INDEX, PDU));
+      current_position.set_row(StoI(GetSetupField(SETUP_CURR_ROW_INDEX, PDU)));
+      current_position.set_col(StoI(GetSetupField(SETUP_CURR_COL_INDEX, PDU)));
+      destination.set_row(StoI(GetSetupField(SETUP_DEST_ROW_INDEX, PDU)));
+      destination.set_col(StoI(GetSetupField(SETUP_DEST_COL_INDEX, PDU)));
+      break;
+    default :
+      break;
+  }
+}
 
 int main(int argc, char *argv[])
 {
@@ -80,14 +130,7 @@ bzero(&(server_addr.sin_zero),8);
       printf("In Receive loop\n");
       bytes_read = recvfrom(sock, recv_data, BUFLEN, 0,
           (struct sockaddr *)&server_addr, (unsigned int*)sizeof(server_addr));
-      for (int i = 0; i < BUFLEN; i++){
-        if (recv_data[i] == '\0'){
-        std::cout << ' ';
-        }else{
-        std::cout << recv_data[i];
-        }
-      }
-      std::cout << std::endl;
+      ParseServerPDU(recv_data);
     }
    }
 
