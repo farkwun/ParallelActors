@@ -18,6 +18,11 @@
 #include <iostream>
 #include <string>
 
+int sock;
+struct sockaddr_in server_addr;
+char recv_data[BUFLEN];
+char send_data[BUFLEN];
+
 Coordinate position;
 Coordinate destination;
 int vision_grid_size;
@@ -70,6 +75,22 @@ void PrintAttributes(){
   std::cout << "Destination : " << destination.to_str() << std::endl;
 }
 
+char * RegisterPDU(){
+  char * PDU;
+
+  PDU = (char *) malloc(BUFLEN);
+  memset(&PDU[0], 0, sizeof(PDU));
+
+  PDU[0] = REGISTER;
+
+  return PDU;
+}
+
+void SendPDU(char * PDU){
+  sendto (sock, PDU, BUFLEN, 0,
+      (struct sockaddr *)&server_addr, sizeof(server_addr));
+}
+
 void ParseServerPDU(char * PDU){
   char PDU_type = PDU[PDU_TYPE_INDEX];
 
@@ -99,14 +120,9 @@ void ParseServerPDU(char * PDU){
 
 int main(int argc, char *argv[])
 {
-  int sock;
-  int bytes_read;
-  struct sockaddr_in server_addr;
   struct hostent *host;
   const char *input_host = "localhost";
   const char *service = "3000";
-  char recv_data[BUFLEN];
-  char send_data[BUFLEN];
 
   switch (argc) {
     case 1:
@@ -138,31 +154,12 @@ int main(int argc, char *argv[])
   server_addr.sin_addr = *((struct in_addr *)host->h_addr);
   bzero(&(server_addr.sin_zero),8);
 
+  SendPDU(RegisterPDU());
 
-  while (1)
-  {
-
-    //printf("Type Something (q or Q to quit):");
-    //fgets(send_data, 1024, stdin);
-    //
-    send_data[0] = REGISTER;
-
-    sendto(sock, send_data, strlen(send_data), 0,
-        (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-    /*if ((strcmp(send_data , "q") == 0) || strcmp(send_data , "Q") == 0){
-      break;
-      }
-      else{
-      sendto(sock, send_data, strlen(send_data), 0,
-      (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-      }*/
-
-    while(1){
-      printf("In Receive loop\n");
-      bytes_read = recvfrom(sock, recv_data, BUFLEN, 0,
-          (struct sockaddr *)&server_addr, (unsigned int*)sizeof(server_addr));
-      ParseServerPDU(recv_data);
-    }
+  while(1){
+    printf("In Receive loop\n");
+    recvfrom(sock, recv_data, BUFLEN, 0,
+        (struct sockaddr *)&server_addr, (unsigned int*)sizeof(server_addr));
+    ParseServerPDU(recv_data);
   }
-
 }
