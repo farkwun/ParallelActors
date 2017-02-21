@@ -18,7 +18,7 @@ server: Server.cpp
 	${CPP} ${CFLAGS} -pthread Server.cpp Map.cpp Actor.cpp Coordinate.cpp -o server
 
 client: Client.cpp
-	${CPP} ${CFLAGS} Client.cpp -o client
+	${CPP} ${CFLAGS} Coordinate.cpp Client.cpp -o client
 
 clean:
 	-rm -f ${TARGETS}
