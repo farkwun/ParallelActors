@@ -83,6 +83,9 @@ void Map::AddActor(Actor actor){
 }
 
 bool Map::AddActorCases(int row, int col){
+  if (out_of_bounds(row, col)){
+    return false;
+  }
   if (map[row][col] == kEmpty){
     map[row][col] = kActor;
   }else{
@@ -98,7 +101,9 @@ void Map::ClearActor(Actor actor){
 }
 
 bool Map::ClearActorCases(int row, int col){
-  map[row][col] = kEmpty;
+  if (!out_of_bounds(row, col)){
+    map[row][col] = kEmpty;
+  }
   return false;
 }
 
@@ -107,7 +112,7 @@ bool Map::IsValidStep(Coordinate old_pos, Coordinate new_pos){
   bool step_validity = false;
 
   manhattan_distance = abs(new_pos.get_row() - old_pos.get_row()) +
-     abs(new_pos.get_col() - old_pos.get_col());
+    abs(new_pos.get_col() - old_pos.get_col());
 
   if (manhattan_distance <= step_size){
     step_validity = true;
@@ -140,7 +145,7 @@ void Map::CheckCollision(Actor actor){
 }
 
 bool Map::CheckCollisionCases(int row, int col){
-  if (map[row][col] == kCollision){
+  if (out_of_bounds(row, col) || map[row][col] == kCollision){
     return true;
   }else{
     return false;
