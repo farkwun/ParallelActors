@@ -46,6 +46,10 @@ bool Actor::get_invalid_move(){
   return invalid_move;
 }
 
+bool Actor::get_timeout(){
+  return timeout;
+}
+
 std::string Actor::get_id(){
   return id;
 }
@@ -72,6 +76,10 @@ void Actor::set_arrived(bool arrival){
 
 void Actor::set_invalid_move(bool invalid){
   invalid_move = invalid;
+}
+
+void Actor::set_timeout(bool timed_out){
+  timeout = timed_out;
 }
 
 void Actor::set_id(std::string new_id){

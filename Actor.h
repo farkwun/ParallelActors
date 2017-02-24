@@ -17,9 +17,10 @@ class Actor {
     Coordinate position;
     Coordinate destination;
     Coordinate next_move;
-    bool arrived = false;
+    bool arrived      = false;
     bool invalid_move = false;
-    bool collided = false;
+    bool timeout      = false;
+    bool collided     = false;
     std::string id;
   public:
     Actor();
@@ -31,6 +32,7 @@ class Actor {
     bool get_collided();
     bool get_arrived();
     bool get_invalid_move();
+    bool get_timeout();
     std::string get_id();
     void set_position(Coordinate new_position);
     void set_destination(Coordinate new_destination);
@@ -38,6 +40,7 @@ class Actor {
     void set_collided(bool collision);
     void set_arrived(bool arrival);
     void set_invalid_move(bool invalid);
+    void set_timeout(bool timed_out);
     void set_id(std::string new_id);
     void print();
 };
