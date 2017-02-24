@@ -23,35 +23,37 @@ int StoI(std::string number){
 
 void print_header();
 void print_footer();
-void Print(void (*f) (char *));
+void Print(void (*f) (char *), char * PDU);
 void Register(char * PDU);
 void Setup(char * PDU);
 void Vision(char * PDU);
 void Movement(char * PDU);
+void Default(char * PDU);
 
 void PrintPDU(char * PDU){
   char PDU_type = PDU[PDU_TYPE_INDEX];
   switch(PDU_type){
     case REGISTER :
-      Print(Register(PDU));
+      Print(&Register, PDU);
       break;
     case SETUP    :
-      Print(Setup(PDU));
+      Print(&Setup, PDU);
       break;
     case VISION   :
-      Print(Vision(PDU));
+      Print(&Vision, PDU);
       break;
     case MOVEMENT :
-      Print(Movement(PDU));
+      Print(&Movement, PDU);
       break;
     default  :
+      Print(&Default, PDU);
       break;
   }
 }
 
-void Print(void (*f) (char *)){
+void Print(void (*f) (char *), char * PDU){
   print_header();
-  (*f);
+  (*f)(PDU);
   print_footer();
 }
 
@@ -95,6 +97,12 @@ void Movement(char * PDU){
   std::cout << "SEQ NUM     : " << (int)PDU[MOVE_SEQ_INDEX] << std::endl;
   std::cout << "MOVE TO ROW : " << GetField(MOVE_NEXT_ROW_INDEX, PDU, len)  << std::endl;
   std::cout << "MOVE TO COL : " << GetField(MOVE_NEXT_COL_INDEX, PDU, len)  << std::endl;
+}
+
+void Default(char * PDU){
+  std::cout << "Unknown packet!" << std::endl;
+  std::cout << "Printing until first null char..." << std::endl;
+  std::cout << PDU << std::endl;
 }
 
 void print_header(){
