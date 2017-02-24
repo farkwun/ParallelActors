@@ -33,16 +33,16 @@ void PrintPDU(char * PDU){
   char PDU_type = PDU[PDU_TYPE_INDEX];
   switch(PDU_type){
     case REGISTER :
-      Register(PDU);
+      Print(Register(PDU));
       break;
     case SETUP    :
-      Setup(PDU);
+      Print(Setup(PDU));
       break;
     case VISION   :
-      Vision(PDU);
+      Print(Vision(PDU));
       break;
     case MOVEMENT :
-      Movement(PDU);
+      Print(Movement(PDU));
       break;
     default  :
       break;
@@ -103,7 +103,6 @@ void print_header(){
   std::cout << std::endl;
   std::cout << header << std::endl;
   std::cout << std::endl;
-
 }
 
 void print_footer(){

@@ -375,6 +375,7 @@ int main(int argc, char *argv[])
 
   printf("\nUDPServer Waiting for client on port ");
   printf(service);
+  printf("\n");
   fflush(stdout);
 
   InitializeMap();
