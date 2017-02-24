@@ -123,7 +123,7 @@ bool Map::IsValidStep(Coordinate old_pos, Coordinate new_pos){
   return step_validity;
 }
 
-void Map::MoveActor(Actor actor, Coordinate new_pos){
+Actor Map::MoveActor(Actor actor, Coordinate new_pos){
   if(IsValidStep(actor.get_position(), new_pos)){
     actor.set_invalid_move(false);
     ClearActor(actor);
@@ -132,9 +132,10 @@ void Map::MoveActor(Actor actor, Coordinate new_pos){
   }else{
     actor.set_invalid_move(true);
   }
+  return actor;
 }
 
-void Map::CheckCollision(Actor actor){
+Actor Map::CheckCollision(Actor actor){
   bool collision = false;
   bool (Map::*cases)(int, int);
   cases = &Map::CheckCollisionCases;
@@ -142,6 +143,7 @@ void Map::CheckCollision(Actor actor){
   if (collision){
     actor.set_collided(true);
   }
+  return actor;
 }
 
 bool Map::CheckCollisionCases(int row, int col){
@@ -178,7 +180,6 @@ bool Map::AtDestination(Actor actor){
       dest_col >= actor_col_min &&
       dest_col <= actor_col_max
      ){
-    actor.set_arrived(true);
     return true;
   }else{
     return false;

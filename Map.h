@@ -54,8 +54,8 @@ class Map {
     void set_map(std::vector< std::vector<char> > new_map);
     void AddActor(Actor actor);
     void ClearActor(Actor actor);
-    void MoveActor(Actor actor, Coordinate new_pos);
-    void CheckCollision(Actor actor);
+    Actor MoveActor(Actor actor, Coordinate new_pos);
+    Actor CheckCollision(Actor actor);
     bool AtDestination(Actor actor);
     std::vector< std::vector<char> > GetSurroundings(Coordinate coordinate);
     bool out_of_bounds(int row, int col);

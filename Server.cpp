@@ -264,71 +264,83 @@ void *ReceiveManager(void *args){
   }
 }
 
-void IterateCurrentActors(std::unordered_map<std::string, Actor> temp, void (*f)(Actor)){
+void IterateCurrentActors(Actor (*f)(Actor)){
   if (current_actors.empty()){
     return;
   }
 
   std::unordered_map<std::string, Actor>::iterator it;
 
-  it = temp.begin();
+  it = current_actors.begin();
 
-  while (it != temp.end()){
-    (*f)(it->second);
+  while (it != current_actors.end()){
+    current_actors[it->first] = (*f)(it->second);
     it++;
   }
 };
 
-void SetTimeouts(Actor actor){
+Actor PrintActor(Actor actor){
+  std::cout << "PRINTING ACTOR ... " << actor.get_id() << std::endl;
+  actor.print();
+  std::cout << "====================== : " <<actor.get_id() << std::endl;
+  return actor;
+}
+
+Actor SetTimeouts(Actor actor){
   if (actor.get_next_move().get_row() < 0
       && actor.get_next_move().get_col() < 0
       && !actor.get_timeout()){
     actor.set_timeout(true);
   }
+  return actor;
 }
 
-void MoveActor(Actor actor){
+Actor MoveActor(Actor actor){
   if(!actor.get_timeout()){
     Coordinate reset_coordinate;
-    map.MoveActor(actor, actor.get_next_move());
+    actor = map.MoveActor(actor, actor.get_next_move());
     actor.set_next_move(reset_coordinate);
   }
+  return actor;
 }
 
-void DetectCollision(Actor actor){
-  map.CheckCollision(actor);
+Actor DetectCollision(Actor actor){
+  actor = map.CheckCollision(actor);
+  return actor;
 }
 
-void CheckDestination(Actor actor){
-  map.AtDestination(actor);
+Actor CheckDestination(Actor actor){
+  if (map.AtDestination(actor)){
+    actor.set_arrived(true);
+  }else{
+    actor.set_arrived(false);
+  }
+  return actor;
 }
 
-void SendUpdate(Actor actor){
+Actor SendUpdate(Actor actor){
   SendPDU(VisionPDU(actor), actor.get_address());
+  return actor;
 }
 
 void *MapManager(void *args){
   printf("\nIn Map Manager\n");
   while(1){
-      std::unordered_map<std::string, Actor> temp(current_actors);
-      IterateCurrentActors(temp, &SetTimeouts);
+      IterateCurrentActors(&PrintActor);
+      std::cout << "Prints" << std::endl;
+      IterateCurrentActors(&SetTimeouts);
       std::cout << "Timeouts" << std::endl;
-      IterateCurrentActors(temp, &MoveActor);
+      IterateCurrentActors(&MoveActor);
       std::cout << "Move" << std::endl;
-      IterateCurrentActors(temp, &DetectCollision);
+      IterateCurrentActors(&DetectCollision);
       std::cout << "Collisions" << std::endl;
-      IterateCurrentActors(temp, &CheckDestination);
+      IterateCurrentActors(&CheckDestination);
       std::cout << "Destinations" << std::endl;
       AddNewActors();
       std::cout << "New Actors" << std::endl;
-      IterateCurrentActors(temp, &SendUpdate);
+      IterateCurrentActors(&SendUpdate);
       std::cout << "Send Updates" << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(5));
-      /*    MoveActor();
-            DetectCollision();
-            CheckDestination();
-            AddNewActors();
-            SendUpdate();*/
   }
 }
 
