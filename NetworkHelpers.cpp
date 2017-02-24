@@ -10,6 +10,8 @@ std::string GetField(int start, char * fields, int field_len){
 
   std::copy(fields + start, fields + end, field_array);
 
+  field_array[field_len] = '\0';
+
   std::string field(field_array);
 
   return field;
