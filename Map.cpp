@@ -111,6 +111,10 @@ bool Map::IsValidStep(Coordinate old_pos, Coordinate new_pos){
   int manhattan_distance;
   bool step_validity = false;
 
+  if(out_of_bounds(new_pos.get_row(), new_pos.get_col())){
+    return false;
+  }
+
   manhattan_distance = abs(new_pos.get_row() - old_pos.get_row()) +
     abs(new_pos.get_col() - old_pos.get_col());
 
