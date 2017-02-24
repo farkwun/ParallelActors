@@ -182,7 +182,6 @@ void ParseServerPDU(char * PDU){
     default :
       break;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 int main(int argc, char *argv[])
