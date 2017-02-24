@@ -15,10 +15,10 @@ Map.o: Map.h Map.cpp
 	${CPP} -c ${CFLAGS} Map.h Map.cpp
 
 server: Server.cpp
-	${CPP} ${CFLAGS} -pthread Server.cpp Map.cpp Actor.cpp Coordinate.cpp -o server
+	${CPP} ${CFLAGS} -pthread NetworkHelpers.cpp Server.cpp Map.cpp Actor.cpp Coordinate.cpp -o server
 
 client: Client.cpp
-	${CPP} ${CFLAGS} Coordinate.cpp Client.cpp -o client
+	${CPP} ${CFLAGS} NetworkHelpers.cpp Coordinate.cpp Client.cpp -o client
 
 clean:
 	-rm -f ${TARGETS}
