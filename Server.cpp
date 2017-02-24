@@ -17,8 +17,11 @@
 #include <iostream>
 #include "Map.h"
 #include "PDUConstants.h"
+#include "NetworkHelpers.h"
 #include "Actor.h"
 #include <pthread.h>
+#include <chrono>
+#include <thread>
 
 int sock;
 struct sockaddr_in server_addr , client_addr;
@@ -56,6 +59,34 @@ std::string GenerateID(){
   return output_id;
 }
 
+char BooltoChar(bool input){
+  if (input){
+    return TRUE;
+  }else{
+    return FALSE;
+  }
+}
+
+char * Unroll2DVector(std::vector< std::vector<char> > segment){
+  int i, j, k;
+  char * unrolled_segment;
+  unrolled_segment = (char *) malloc(BUFLEN);
+
+  std::cout << std::endl;
+
+  k = 0;
+  for(i = 0; i < segment.size(); i++){
+    for(j = 0; j < segment[0].size(); j++){
+      unrolled_segment[k] = segment[i][j];
+      k++;
+    }
+  }
+
+  unrolled_segment[k] = '\0';
+
+  return unrolled_segment;
+}
+
 void print_map_segment(std::vector< std::vector<char> > segment){
   int rows = segment.size();
   int cols = segment[0].size();
@@ -69,6 +100,30 @@ void print_map_segment(std::vector< std::vector<char> > segment){
 void SendPDU(char * PDU, struct sockaddr_in in_address){
   sendto(sock, PDU, BUFLEN, 0,
       (struct sockaddr *)&in_address, sizeof(in_address));
+}
+
+void UpdateActorMove(char * PDU, struct sockaddr_in address){
+  std::string actor_id;
+  Coordinate new_move;
+  Actor * actor;
+
+  actor_id = GetField(PDU_ID_INDEX, PDU, ID_LEN);
+
+  if (current_actors.count(actor_id) == 0){
+    std::cout << "NO such actor with id = " << actor_id << " was found" << std::endl;
+    return;
+  }
+
+  actor = &current_actors.at(actor_id);
+
+  if (actor->get_address().sin_addr.s_addr == address.sin_addr.s_addr){
+    actor->set_timeout(false);
+
+    new_move.set_row(StoI(GetField(MOVE_NEXT_ROW_INDEX, PDU, MOVE_FIELD_LEN)));
+    new_move.set_col(StoI(GetField(MOVE_NEXT_COL_INDEX, PDU, MOVE_FIELD_LEN)));
+
+    actor->set_next_move(new_move);
+  }
 }
 
 void RegisterNewActor(struct sockaddr_in address){
@@ -110,6 +165,38 @@ char * SetupPDU(Actor actor){
 
   sprintf(PDU + SETUP_DEST_COL_INDEX,"%d",actor.get_destination().get_col());
 
+  actor.print();
+
+  return PDU;
+}
+
+char * VisionPDU(Actor actor){
+  char * PDU;
+  char * vision_grid;
+  PDU = (char *) malloc(BUFLEN);
+  vision_grid = (char *) malloc(BUFLEN);
+
+  // fill PDU and vision_grid with null characters
+  for (int i = 0; i < BUFLEN; i++){
+    PDU[i] = '\0';
+    vision_grid[i] = '\0';
+  }
+
+  vision_grid = Unroll2DVector(map.GetSurroundings(actor.get_position()));
+
+  PDU[PDU_TYPE_INDEX] = VISION;
+  PDU[VISION_COLLIDED_INDEX] = BooltoChar(actor.get_collided());
+  PDU[VISION_ARRIVED_INDEX]  = BooltoChar(actor.get_arrived());
+  PDU[VISION_TIMEOUT_INDEX]  = BooltoChar(actor.get_timeout());
+
+  sprintf(PDU + VISION_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
+
+  sprintf(PDU + VISION_CURR_COL_INDEX,"%d",actor.get_position().get_col());
+
+  for (int i = VISION_GRID_INDEX; i < VISION_GRID_INDEX + strlen(vision_grid); i++){
+    PDU[i] = vision_grid[i-VISION_GRID_INDEX];
+  }
+
   return PDU;
 }
 
@@ -145,6 +232,8 @@ void AddNewActors(){
 
     SendPDU(SetupPDU(new_actor), new_actor.get_address());
 
+    SendPDU(VisionPDU(new_actor), new_actor.get_address());
+
     new_actors.erase(new_actor_id);
 
     it++;
@@ -155,13 +244,13 @@ void ParseRecvdPDU(){
   bytes_read = recvfrom(sock,recvBuff,BUFLEN,0,
       (struct sockaddr *)&client_addr, &addr_len);
   PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
-  for (int i = 0; i < BUFLEN; i++){
-    std::cout << recvBuff[i];
-  }
-  std::cout << std::endl;
+  PrintPDU(recvBuff);
   switch(PDU_TYPE){
     case REGISTER :
       RegisterNewActor(client_addr);
+      break;
+    case MOVEMENT :
+      UpdateActorMove(recvBuff, client_addr);
       break;
     default:
       break;
@@ -175,26 +264,71 @@ void *ReceiveManager(void *args){
   }
 }
 
-void MoveActors();
-void DetectCollisions();
-void CheckDestinations();
-void SendUpdates();
+void IterateCurrentActors(std::unordered_map<std::string, Actor> temp, void (*f)(Actor)){
+  if (current_actors.empty()){
+    return;
+  }
+
+  std::unordered_map<std::string, Actor>::iterator it;
+
+  it = temp.begin();
+
+  while (it != temp.end()){
+    (*f)(it->second);
+    it++;
+  }
+};
+
+void SetTimeouts(Actor actor){
+  if (actor.get_next_move().get_row() < 0
+      && actor.get_next_move().get_col() < 0
+      && !actor.get_timeout()){
+    actor.set_timeout(true);
+  }
+}
+
+void MoveActor(Actor actor){
+  if(!actor.get_timeout()){
+    Coordinate reset_coordinate;
+    map.MoveActor(actor, actor.get_next_move());
+    actor.set_next_move(reset_coordinate);
+  }
+}
+
+void DetectCollision(Actor actor){
+  map.CheckCollision(actor);
+}
+
+void CheckDestination(Actor actor){
+  map.AtDestination(actor);
+}
+
+void SendUpdate(Actor actor){
+  SendPDU(VisionPDU(actor), actor.get_address());
+}
 
 void *MapManager(void *args){
-  int time_step = 1000000;
-  int count = 0;
   printf("\nIn Map Manager\n");
   while(1){
-    if (count == time_step){
+      std::unordered_map<std::string, Actor> temp(current_actors);
+      IterateCurrentActors(temp, &SetTimeouts);
+      std::cout << "Timeouts" << std::endl;
+      IterateCurrentActors(temp, &MoveActor);
+      std::cout << "Move" << std::endl;
+      IterateCurrentActors(temp, &DetectCollision);
+      std::cout << "Collisions" << std::endl;
+      IterateCurrentActors(temp, &CheckDestination);
+      std::cout << "Destinations" << std::endl;
       AddNewActors();
-      /*    MoveActors();
-            DetectCollisions();
-            CheckDestinations();
+      std::cout << "New Actors" << std::endl;
+      IterateCurrentActors(temp, &SendUpdate);
+      std::cout << "Send Updates" << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(5));
+      /*    MoveActor();
+            DetectCollision();
+            CheckDestination();
             AddNewActors();
-            SendUpdates();*/
-      count = 0;
-    }
-    count++;
+            SendUpdate();*/
   }
 }
 
@@ -241,7 +375,6 @@ int main(int argc, char *argv[])
   fflush(stdout);
 
   InitializeMap();
-
 
   pthread_create(&receive_manager_id, NULL, &ReceiveManager, NULL);
   pthread_create(&map_manager_id, NULL, &MapManager, NULL);
