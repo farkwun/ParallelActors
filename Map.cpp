@@ -215,6 +215,7 @@ std::vector< std::vector<char> > Map::GetSurroundings(Coordinate coordinate){
       }
     }
   }
+  return vision_grid;
 }
 
 
