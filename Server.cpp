@@ -258,7 +258,6 @@ void ParseRecvdPDU(){
 }
 
 void *ReceiveManager(void *args){
-  printf("\nIn Receive Manager\n");
   while(1){
     ParseRecvdPDU();
   }
@@ -324,22 +323,14 @@ Actor SendUpdate(Actor actor){
 }
 
 void *MapManager(void *args){
-  printf("\nIn Map Manager\n");
   while(1){
       IterateCurrentActors(&PrintActor);
-      std::cout << "Prints" << std::endl;
       IterateCurrentActors(&SetTimeouts);
-      std::cout << "Timeouts" << std::endl;
       IterateCurrentActors(&MoveActor);
-      std::cout << "Move" << std::endl;
       IterateCurrentActors(&DetectCollision);
-      std::cout << "Collisions" << std::endl;
       IterateCurrentActors(&CheckDestination);
-      std::cout << "Destinations" << std::endl;
       AddNewActors();
-      std::cout << "New Actors" << std::endl;
       IterateCurrentActors(&SendUpdate);
-      std::cout << "Send Updates" << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(5));
   }
 }
@@ -395,23 +386,7 @@ int main(int argc, char *argv[])
     sleep(1);
   }
 
-
   printf("Should never get here");
 
-  while (1)
-  {
-
-    bytes_read = recvfrom(sock,recv_data,BUFLEN,0,
-        (struct sockaddr *)&client_addr, &addr_len);
-
-
-    recv_data[bytes_read] = '\0';
-
-    printf("\n(%s , %d) said : ",inet_ntoa(client_addr.sin_addr),
-        ntohs(client_addr.sin_port));
-    printf("%s", recv_data);
-    fflush(stdout);
-
-  }
   return 0;
 }

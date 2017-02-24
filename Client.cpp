@@ -40,21 +40,6 @@ char vision[BUFLEN];
 
 Coordinate next_move;
 
-/*std::string GetField(int start, char * fields, int field_len){
-  char field_array[field_len];
-  int end = start + field_len;
-
-  std::copy(fields + start, fields + end, field_array);
-
-  std::string field(field_array);
-
-  return field;
-}
-
-int StoI(std::string number){
-  return std::stoi(number, nullptr, 10);
-}
-*/
 bool IsRightSequence(char sequence_num){
   if ((int)sequence_num == sequence){
     return true;
@@ -72,7 +57,7 @@ bool IsTrueChar(char boolean){
 }
 
 bool CheckSequence(int seq_num){
-  // still need to implement or decide on how sequence check
+  // TODO:implement or decide on how sequence check
   // is going to work
   return true;
 }
@@ -88,10 +73,6 @@ void SetDestFromPDU(char * PDU, int row_index, int col_index, int field_len){
 }
 
 void SetVision(char * PDU){
-//  std::copy(PDU + VISION_GRID_INDEX,
- //     PDU + VISION_GRID_INDEX + vision_grid_size, vision);
- //
-
  strncpy(vision, PDU + VISION_GRID_INDEX, vision_grid_size);
 }
 
@@ -112,6 +93,7 @@ void PrintAttributes(){
 }
 
 void DecideNextMove(char * vision, Coordinate position){
+  // TODO: Implement actual control logic
   // rudimentary control logic -- just moves left
   next_move.set_row(position.get_row() - 1);
   next_move.set_col(position.get_col());
@@ -165,7 +147,6 @@ void ParseServerPDU(char * PDU){
       PrintAttributes();
       break;
     case VISION :
-      std::cout << "My ID is : " << id << std::endl;
       if(CheckSequence((int)PDU[VISION_SEQ_NUM_INDEX])){
         collided = IsTrueChar(PDU[VISION_COLLIDED_INDEX]);
         arrived  = IsTrueChar(PDU[VISION_ARRIVED_INDEX]);
@@ -175,6 +156,7 @@ void ParseServerPDU(char * PDU){
         DecideNextMove(vision, position);
         SendPDU(MovementPDU());
         if(collided){
+          //TODO: Determine collision behaviour
           exit(0);
         }
       }
