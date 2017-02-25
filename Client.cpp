@@ -94,9 +94,20 @@ void PrintAttributes(){
 
 void DecideNextMove(char * vision, Coordinate position){
   // TODO: Implement actual control logic
-  // rudimentary control logic -- just moves left
-  next_move.set_row(position.get_row() - 1);
-  next_move.set_col(position.get_col());
+  // rudimentary control logic -- just moves towards destination
+  int diff;
+  if (position.get_row() != destination.get_row()){
+    diff = position.get_row() - destination.get_row();
+    next_move.set_row(position.get_row() - (diff/abs(diff)));
+    next_move.set_col(position.get_col());
+  }else if (position.get_col() != destination.get_col()){
+    diff = position.get_col() - destination.get_col();
+    next_move.set_col(position.get_col() - (diff/abs(diff)));
+    next_move.set_row(position.get_row());
+  }else{
+    next_move.set_row(position.get_row());
+    next_move.set_col(position.get_col());
+  }
 }
 
 char * RegisterPDU(){
@@ -155,7 +166,7 @@ void ParseServerPDU(char * PDU){
         SetVision(PDU);
         DecideNextMove(vision, position);
         SendPDU(MovementPDU());
-        if(collided){
+        if(collided || arrived){
           SendPDU(RegisterPDU());
         }
       }

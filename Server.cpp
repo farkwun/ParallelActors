@@ -318,6 +318,10 @@ Actor CheckDestination(Actor actor){
   }else{
     actor.set_arrived(false);
   }
+  if(actor.get_arrived()){
+    // die happy
+    dead_actors[actor.get_id()] = actor.get_address();
+  }
   return actor;
 }
 
