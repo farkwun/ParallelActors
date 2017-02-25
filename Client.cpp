@@ -156,8 +156,7 @@ void ParseServerPDU(char * PDU){
         DecideNextMove(vision, position);
         SendPDU(MovementPDU());
         if(collided){
-          //TODO: Determine collision behaviour
-          exit(0);
+          SendPDU(RegisterPDU());
         }
       }
       break;

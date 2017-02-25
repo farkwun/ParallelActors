@@ -38,6 +38,7 @@ char PDU_DATA[DATALEN];
 
 std::unordered_map<std::string, Actor> current_actors;
 std::unordered_map<std::string, struct sockaddr_in> new_actors;
+std::unordered_map<std::string, struct sockaddr_in> dead_actors;
 
 Map map;
 
@@ -305,6 +306,9 @@ Actor MoveActor(Actor actor){
 
 Actor DetectCollision(Actor actor){
   actor = map.CheckCollision(actor);
+  if(actor.get_collided()){
+    dead_actors[actor.get_id()] = actor.get_address();
+  }
   return actor;
 }
 
@@ -322,16 +326,36 @@ Actor SendUpdate(Actor actor){
   return actor;
 }
 
+void DeleteDeadActors(){
+  if (dead_actors.empty()){
+    return;
+  }
+
+  std::unordered_map<std::string, struct sockaddr_in> temp(dead_actors);
+  std::unordered_map<std::string, struct sockaddr_in>::iterator it;
+
+  it = temp.begin();
+
+  while(it != temp.end()){
+    if (current_actors.count(it->first) != 0){
+      current_actors.erase(it->first);
+      dead_actors.erase(it->first);
+    }
+    it++;
+  }
+}
+
 void *MapManager(void *args){
   while(1){
-      IterateCurrentActors(&PrintActor);
-      IterateCurrentActors(&SetTimeouts);
-      IterateCurrentActors(&MoveActor);
-      IterateCurrentActors(&DetectCollision);
-      IterateCurrentActors(&CheckDestination);
-      AddNewActors();
-      IterateCurrentActors(&SendUpdate);
-      std::this_thread::sleep_for(std::chrono::seconds(5));
+    IterateCurrentActors(&PrintActor);
+    IterateCurrentActors(&SetTimeouts);
+    IterateCurrentActors(&MoveActor);
+    IterateCurrentActors(&DetectCollision);
+    IterateCurrentActors(&CheckDestination);
+    AddNewActors();
+    IterateCurrentActors(&SendUpdate);
+    DeleteDeadActors();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 }
 
