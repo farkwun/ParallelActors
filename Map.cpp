@@ -83,14 +83,21 @@ void Map::AddActor(Actor actor){
 }
 
 bool Map::AddActorCases(int row, int col){
+  char type;
   if (out_of_bounds(row, col)){
     return false;
   }
-  if (map[row][col] == kEmpty){
+
+  type = map[row][col];
+
+  if (type == kEmpty){
     map[row][col] = kActor;
+  }else if (type == kObstacle){
+    map[row][col] = type;
   }else{
     map[row][col] = kCollision;
   }
+
   return false;
 }
 
@@ -101,8 +108,14 @@ void Map::ClearActor(Actor actor){
 }
 
 bool Map::ClearActorCases(int row, int col){
+  char type;
   if (!out_of_bounds(row, col)){
-    map[row][col] = kEmpty;
+    type = map[row][col];
+    if (type == kObstacle){
+      map[row][col] = type;
+    }else{
+      map[row][col] = kEmpty;
+    }
   }
   return false;
 }
@@ -151,7 +164,9 @@ Actor Map::CheckCollision(Actor actor){
 }
 
 bool Map::CheckCollisionCases(int row, int col){
-  if (out_of_bounds(row, col) || map[row][col] == kCollision){
+  if (out_of_bounds(row, col) ||
+      map[row][col] == kCollision ||
+      map[row][col] == kObstacle){
     return true;
   }else{
     return false;
