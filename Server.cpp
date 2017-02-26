@@ -331,6 +331,8 @@ Actor SendUpdate(Actor actor){
 }
 
 void DeleteDeadActors(){
+  std::string dead_actor_id;
+
   if (dead_actors.empty()){
     return;
   }
@@ -341,9 +343,11 @@ void DeleteDeadActors(){
   it = temp.begin();
 
   while(it != temp.end()){
-    if (current_actors.count(it->first) != 0){
-      current_actors.erase(it->first);
-      dead_actors.erase(it->first);
+    dead_actor_id = it->first;
+    if (current_actors.count(dead_actor_id) != 0){
+      map.ClearActor(current_actors.at(dead_actor_id));
+      current_actors.erase(dead_actor_id);
+      dead_actors.erase(dead_actor_id);
     }
     it++;
   }
