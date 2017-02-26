@@ -241,10 +241,10 @@ std::vector< std::vector<char> > Map::GetSurroundings(Coordinate coordinate){
 
 bool Map::out_of_bounds(int row, int col){
   bool out_of_bounds = false;
-  if (row > map_rows || row < 0){
+  if (row >= map_rows || row < 0){
     out_of_bounds = true;
   }
-  if (col > map_cols || col < 0){
+  if (col >= map_cols || col < 0){
     out_of_bounds = true;
   }
   return out_of_bounds;
