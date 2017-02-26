@@ -245,7 +245,7 @@ bool Map::out_of_bounds(int row, int col){
     out_of_bounds = true;
   }
   if (col > map_cols || col < 0){
-    out_of_bounds = false;
+    out_of_bounds = true;
   }
   return out_of_bounds;
 }
