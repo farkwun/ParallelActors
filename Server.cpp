@@ -75,8 +75,6 @@ char * Unroll2DVector(std::vector< std::vector<char> > segment){
   char * unrolled_segment;
   unrolled_segment = (char *) malloc(BUFLEN);
 
-  std::cout << std::endl;
-
   k = 0;
   for(i = 0; i < segment.size(); i++){
     for(j = 0; j < segment[0].size(); j++){
