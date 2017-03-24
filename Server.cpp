@@ -23,6 +23,8 @@
 #include <chrono>
 #include <thread>
 
+bool debug = false;
+
 int sock;
 struct sockaddr_in server_addr , client_addr;
 int bytes_read;
@@ -166,7 +168,9 @@ char * SetupPDU(Actor actor){
 
   sprintf(PDU + SETUP_DEST_COL_INDEX,"%d",actor.get_destination().get_col());
 
-  actor.print();
+  if(debug){
+    actor.print();
+  }
 
   return PDU;
 }
@@ -245,7 +249,9 @@ void ParseRecvdPDU(){
   bytes_read = recvfrom(sock,recvBuff,BUFLEN,0,
       (struct sockaddr *)&client_addr, &addr_len);
   PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
-  PrintPDU(recvBuff);
+  if (debug){
+    PrintPDU(recvBuff);
+  }
   switch(PDU_TYPE){
     case REGISTER :
       RegisterNewActor(client_addr);
@@ -280,9 +286,11 @@ void IterateCurrentActors(Actor (*f)(Actor)){
 };
 
 Actor PrintActor(Actor actor){
-  std::cout << "PRINTING ACTOR ... " << actor.get_id() << std::endl;
-  actor.print();
-  std::cout << "====================== : " <<actor.get_id() << std::endl;
+  if(debug){
+    std::cout << "PRINTING ACTOR ... " << actor.get_id() << std::endl;
+    actor.print();
+    std::cout << "====================== : " <<actor.get_id() << std::endl;
+  }
   return actor;
 }
 
@@ -405,9 +413,11 @@ int main(int argc, char *argv[])
   // initialize seed for rand()
   srand(time(0));
 
-  printf("\nUDPServer Waiting for client on port ");
-  printf(service);
-  printf("\n");
+  if (debug){
+    printf("\nUDPServer Waiting for client on port ");
+    printf(service);
+    printf("\n");
+  }
   fflush(stdout);
 
   InitializeMap();
