@@ -254,8 +254,8 @@ bool Map::out_of_bounds(int row, int col){
 Coordinate Map::RandomEmptyLocation(){
   int row, col;
   Coordinate test_coordinate;
-  std::uniform_int_distribution<int> distrRow(0, map_cols);
-  std::uniform_int_distribution<int> distrCol(0, map_rows);
+  std::uniform_int_distribution<int> distrRow(0, map_rows);
+  std::uniform_int_distribution<int> distrCol(0, map_cols);
   bool (Map::*cases)(int, int);
   cases = &Map::RandomEmptyLocationCases;
   bool IsOccupied = true;
@@ -283,8 +283,8 @@ bool Map::RandomEmptyLocationCases(int row, int col){
 Coordinate Map::RandomDestination(){
   int row, col;
   Coordinate destination;
-  std::uniform_int_distribution<int> distrRow(0, map_cols);
-  std::uniform_int_distribution<int> distrCol(0, map_rows);
+  std::uniform_int_distribution<int> distrRow(0, map_rows);
+  std::uniform_int_distribution<int> distrCol(0, map_cols);
 
   row = distrRow(engine);
   col = distrCol(engine);
