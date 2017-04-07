@@ -10,6 +10,7 @@ Map::Map(void){
   seed_engine();
 
   map = default_map;
+  SynchronizePixels();
 }
 
 Map::Map(std::vector< std::vector<char> > input_map){
@@ -19,10 +20,74 @@ Map::Map(std::vector< std::vector<char> > input_map){
   seed_engine();
 
   map = input_map;
+  SynchronizePixels();
 }
 
 void Map::seed_engine(){
   engine.seed(std::random_device{}());
+}
+
+unsigned char Map::get_pixel_for_char(char map_char, int pixel_type){
+  unsigned char pixel_val;
+  if (pixel_type == A){
+    pixel_val = 255;
+    return pixel_val;
+  }
+  switch (map_char) {
+    case kObstacle  :
+      switch (pixel_type){
+        case R :
+          pixel_val = 0;
+          break;
+        case G :
+          pixel_val = 0;
+          break;
+        case B :
+          pixel_val = 0;
+          break;
+      }
+      break;
+    case kEmpty     :
+      switch (pixel_type){
+        case R :
+          pixel_val = 255;
+          break;
+        case G :
+          pixel_val = 255;
+          break;
+        case B :
+          pixel_val = 255;
+          break;
+      }
+      break;
+    case kActor     :
+      switch (pixel_type){
+        case R :
+          pixel_val = 0;
+          break;
+        case G :
+          pixel_val = 0;
+          break;
+        case B :
+          pixel_val = 255;
+          break;
+      }
+      break;
+    case kCollision :
+      switch (pixel_type){
+        case R :
+          pixel_val = 255;
+          break;
+        case G :
+          pixel_val = 0;
+          break;
+        case B :
+          pixel_val = 0;
+          break;
+      }
+      break;
+  }
+  return pixel_val;
 }
 
 void Map::InitializeActorDimensions(){
@@ -48,6 +113,24 @@ void Map::InitializeStepSize(){
   step_size = 1;
 }
 
+void Map::SynchronizePixels(){
+  int num_rows, num_cols, col, row, pindex;
+  num_rows = map.size();
+  num_cols = map[0].size();
+  map_pixels = new sf::Uint8[num_cols * num_rows * bytes_per_pixel];
+
+  for (row = 0; row < num_rows; row++){
+    for (col = 0; col < num_cols; col++){
+      pindex = (row * num_cols + col) * bytes_per_pixel;
+
+      map_pixels[pindex+R] = get_pixel_for_char(map[row][col], R);
+      map_pixels[pindex+G] = get_pixel_for_char(map[row][col], G);
+      map_pixels[pindex+B] = get_pixel_for_char(map[row][col], B);
+      map_pixels[pindex+A] = get_pixel_for_char(map[row][col], A);
+    }
+  }
+}
+
 void Map::set_step_size(int new_step_size){
   step_size = new_step_size;
 }
@@ -64,6 +147,18 @@ std::vector< std::vector<char> > Map::get_map(){
   return map;
 }
 
+sf::Uint8 * Map::get_map_pixels(){
+  return map_pixels;
+}
+
+int Map::get_map_rows(){
+  return map_rows;
+}
+
+int Map::get_map_cols(){
+  return map_cols;
+}
+
 int Map::get_total_surroundings_grid_size(){
   return total_surroundings_grid_size;
 }
@@ -74,6 +169,7 @@ int Map::get_step_size(){
 
 void Map::set_map(std::vector< std::vector<char> > new_map){
   map = new_map;
+  SynchronizePixels();
 }
 
 void Map::AddActor(Actor actor){
