@@ -25,6 +25,7 @@
 #include <SFML/Graphics.hpp>
 
 bool debug = false;
+bool gui   = true;
 
 int sock;
 struct sockaddr_in server_addr , client_addr;
@@ -217,6 +218,9 @@ void InitializeMap(){
 }
 
 void LaunchWindow(){
+  if (!gui){
+    return;
+  }
   int map_rows = map.get_map_rows();
   int map_cols = map.get_map_cols();
   map_window = new sf::RenderWindow(sf::VideoMode(
@@ -381,6 +385,9 @@ void DeleteDeadActors(){
 }
 
 void DisplayMap(){
+  if (!gui){
+    return;
+  }
   if(map_window->isOpen()){
     map.SynchronizePixels();
 
