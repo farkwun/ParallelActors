@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <chrono>
 #include <thread>
+#include <SFML/Graphics.hpp>
 
 bool debug = false;
 
@@ -43,6 +44,12 @@ std::unordered_map<std::string, struct sockaddr_in> new_actors;
 std::unordered_map<std::string, struct sockaddr_in> dead_actors;
 
 Map map;
+
+sf::RenderWindow * map_window;
+int border_size = 100;
+sf::Color win_bg_color = sf::Color::Black;
+sf::Texture map_texture;
+sf::Sprite map_sprite;
 
 std::string GenerateID(){
   char new_id[ID_LEN + 1];
@@ -209,6 +216,20 @@ void InitializeMap(){
   map.InitializeStepSize();
 }
 
+void LaunchWindow(){
+  int map_rows = map.get_map_rows();
+  int map_cols = map.get_map_cols();
+  map_window = new sf::RenderWindow(sf::VideoMode(
+        map_rows + border_size + border_size,
+        map_cols + border_size + border_size),
+      "Parallel Actors");
+
+  map_texture.create(map_cols, map_rows);
+
+  map_sprite.setPosition(border_size, border_size);
+  map_sprite.setTexture(map_texture);
+}
+
 // moves waiting actors to current list
 void AddNewActors(){
   if (new_actors.empty()){
@@ -359,6 +380,18 @@ void DeleteDeadActors(){
   }
 }
 
+void DisplayMap(){
+  if(map_window->isOpen()){
+    map.SynchronizePixels();
+
+    map_texture.update(map.get_map_pixels());
+
+    map_window->clear(win_bg_color);
+    map_window->draw(map_sprite);
+    map_window->display();
+  }
+}
+
 void *MapManager(void *args){
   while(1){
     IterateCurrentActors(&PrintActor);
@@ -369,6 +402,7 @@ void *MapManager(void *args){
     AddNewActors();
     IterateCurrentActors(&SendUpdate);
     DeleteDeadActors();
+    DisplayMap();
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 }
@@ -419,6 +453,7 @@ int main(int argc, char *argv[])
   fflush(stdout);
 
   InitializeMap();
+  LaunchWindow();
 
   pthread_create(&receive_manager_id, NULL, &ReceiveManager, NULL);
   pthread_create(&map_manager_id, NULL, &MapManager, NULL);
