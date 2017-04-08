@@ -117,7 +117,9 @@ void Map::SynchronizePixels(){
   int num_rows, num_cols, col, row, pindex;
   num_rows = map.size();
   num_cols = map[0].size();
-  map_pixels = new sf::Uint8[num_cols * num_rows * bytes_per_pixel];
+  if (map_pixels == NULL){
+    map_pixels = new sf::Uint8[num_cols * num_rows * bytes_per_pixel];
+  }
 
   for (row = 0; row < num_rows; row++){
     for (col = 0; col < num_cols; col++){

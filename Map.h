@@ -32,7 +32,7 @@ class Map {
     const static int A = 3;
     const static int bytes_per_pixel = 4;
     std::vector< std::vector<char> > map;
-    sf::Uint8 * map_pixels;
+    sf::Uint8 * map_pixels = NULL;
     std::default_random_engine engine;
     int map_rows;
     int map_cols;

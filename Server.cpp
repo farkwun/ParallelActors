@@ -109,6 +109,7 @@ void print_map_segment(std::vector< std::vector<char> > segment){
 void SendPDU(char * PDU, struct sockaddr_in in_address){
   sendto(sock, PDU, BUFLEN, 0,
       (struct sockaddr *)&in_address, sizeof(in_address));
+  free(PDU);
 }
 
 void UpdateActorMove(char * PDU, struct sockaddr_in address){
@@ -185,12 +186,10 @@ char * VisionPDU(Actor actor){
   char * PDU;
   char * vision_grid;
   PDU = (char *) malloc(BUFLEN);
-  vision_grid = (char *) malloc(BUFLEN);
 
   // fill PDU and vision_grid with null characters
   for (int i = 0; i < BUFLEN; i++){
     PDU[i] = '\0';
-    vision_grid[i] = '\0';
   }
 
   vision_grid = Unroll2DVector(map.GetSurroundings(actor.get_position()));
@@ -208,6 +207,7 @@ char * VisionPDU(Actor actor){
     PDU[i] = vision_grid[i-VISION_GRID_INDEX];
   }
 
+  free(vision_grid);
   return PDU;
 }
 
