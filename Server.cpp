@@ -122,7 +122,9 @@ void UpdateActorMove(char * PDU, struct sockaddr_in address){
   try {
     actor = &current_actors.at(actor_id);
   } catch (const std::out_of_range& err) {
-    std::cout << "No such actor with id = " << actor_id << " was found" << std::endl;
+    if (debug) {
+      std::cout << "No such actor with id = " << actor_id << " was found" << std::endl;
+    }
     return;
   }
 
