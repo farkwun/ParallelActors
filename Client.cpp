@@ -142,6 +142,7 @@ char * MovementPDU(){
 void SendPDU(char * PDU){
   sendto (sock, PDU, BUFLEN, 0,
       (struct sockaddr *)&server_addr, sizeof(server_addr));
+  free(PDU);
 }
 
 void ParseServerPDU(char * PDU){
