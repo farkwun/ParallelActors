@@ -119,12 +119,12 @@ void UpdateActorMove(char * PDU, struct sockaddr_in address){
 
   actor_id = GetField(PDU_ID_INDEX, PDU, ID_LEN);
 
-  if (current_actors.count(actor_id) == 0){
-    std::cout << "NO such actor with id = " << actor_id << " was found" << std::endl;
+  try {
+    actor = &current_actors.at(actor_id);
+  } catch (const std::out_of_range& err) {
+    std::cout << "No such actor with id = " << actor_id << " was found" << std::endl;
     return;
   }
-
-  actor = &current_actors.at(actor_id);
 
   if (actor->get_address().sin_addr.s_addr == address.sin_addr.s_addr){
     actor->set_timeout(false);
