@@ -24,8 +24,9 @@
 #include <thread>
 #include <SFML/Graphics.hpp>
 
-bool debug = false;
-bool gui   = true;
+bool debug   = false;
+bool gui     = true;
+int sleep_ms = 0;
 
 int sock;
 struct sockaddr_in server_addr , client_addr;
@@ -412,7 +413,7 @@ void *MapManager(void *args){
     IterateCurrentActors(&SendUpdate);
     DeleteDeadActors();
     DisplayMap();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
   }
 }
 
