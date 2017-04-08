@@ -21,6 +21,8 @@
 #include <chrono>
 #include <thread>
 
+bool debug = false;
+
 int sock;
 struct sockaddr_in server_addr;
 char recv_data[BUFLEN];
@@ -63,33 +65,35 @@ bool CheckSequence(int seq_num){
 }
 
 void SetPosFromPDU(char * PDU, int row_index, int col_index, int field_len){
-      position.set_row(StoI(GetField(row_index, PDU, field_len)));
-      position.set_col(StoI(GetField(col_index, PDU, field_len)));
+  position.set_row(StoI(GetField(row_index, PDU, field_len)));
+  position.set_col(StoI(GetField(col_index, PDU, field_len)));
 }
 
 void SetDestFromPDU(char * PDU, int row_index, int col_index, int field_len){
-      destination.set_row(StoI(GetField(row_index, PDU, field_len)));
-      destination.set_col(StoI(GetField(col_index, PDU, field_len)));
+  destination.set_row(StoI(GetField(row_index, PDU, field_len)));
+  destination.set_col(StoI(GetField(col_index, PDU, field_len)));
 }
 
 void SetVision(char * PDU){
- strncpy(vision, PDU + VISION_GRID_INDEX, vision_grid_size);
+  strncpy(vision, PDU + VISION_GRID_INDEX, vision_grid_size);
 }
 
 void PrintAttributes(){
-  std::cout << std::boolalpha;
-  std::cout << "My attributes are... " << std::endl;
-  std::cout << "ID : " << id << std::endl;
-  std::cout << "Vision grid size : " << vision_grid_size << std::endl;
-  std::cout << "Step size : " << step_size << std::endl;
-  std::cout << "Position : " << position.to_str() << std::endl;
-  std::cout << "Destination : " << destination.to_str() << std::endl;
-  std::cout << "Next Move : " << next_move.to_str() << std::endl;
-  std::cout << "Sequence : " << sequence << std::endl;
-  std::cout << "Arrived - " << arrived << std::endl;
-  std::cout << "Collided - " << collided << std::endl;
-  std::cout << "Timeout - " << timeout << std::endl;
-  std::cout << std::endl;
+  if (debug) {
+    std::cout << std::boolalpha;
+    std::cout << "My attributes are... " << std::endl;
+    std::cout << "ID : " << id << std::endl;
+    std::cout << "Vision grid size : " << vision_grid_size << std::endl;
+    std::cout << "Step size : " << step_size << std::endl;
+    std::cout << "Position : " << position.to_str() << std::endl;
+    std::cout << "Destination : " << destination.to_str() << std::endl;
+    std::cout << "Next Move : " << next_move.to_str() << std::endl;
+    std::cout << "Sequence : " << sequence << std::endl;
+    std::cout << "Arrived - " << arrived << std::endl;
+    std::cout << "Collided - " << collided << std::endl;
+    std::cout << "Timeout - " << timeout << std::endl;
+    std::cout << std::endl;
+  }
 }
 
 void DecideNextMove(char * vision, Coordinate position){
@@ -147,7 +151,9 @@ void SendPDU(char * PDU){
 
 void ParseServerPDU(char * PDU){
   char PDU_type = PDU[PDU_TYPE_INDEX];
-  PrintPDU(PDU);
+  if (debug) {
+    PrintPDU(PDU);
+  }
 
   switch(PDU_type){
     case SETUP :
@@ -216,7 +222,9 @@ int main(int argc, char *argv[])
   SendPDU(RegisterPDU());
 
   while(1){
-    printf("In Receive loop\n");
+    if (debug) {
+      printf("In Receive loop\n");
+    }
     recvfrom(sock, recv_data, BUFLEN, 0,
         (struct sockaddr *)&server_addr, (unsigned int*)sizeof(server_addr));
     ParseServerPDU(recv_data);
