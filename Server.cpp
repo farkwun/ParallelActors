@@ -52,6 +52,7 @@ int border_size = 100;
 sf::Color win_bg_color = sf::Color::Black;
 sf::Texture map_texture;
 sf::Sprite map_sprite;
+sf::Event event;
 
 std::string GenerateID(){
   char new_id[ID_LEN + 1];
@@ -392,6 +393,14 @@ void DisplayMap(){
     return;
   }
   if(map_window->isOpen()){
+
+    while(map_window->pollEvent(event)){
+      if (event.type == sf::Event::Closed) {
+        map_window->close();
+        exit(0);
+      }
+    }
+
     map.SynchronizePixels();
 
     map_texture.update(map.get_map_pixels());
