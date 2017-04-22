@@ -228,8 +228,8 @@ void LaunchWindow(){
   int map_rows = map.get_map_rows();
   int map_cols = map.get_map_cols();
   map_window = new sf::RenderWindow(sf::VideoMode(
-        map_rows + border_size + border_size,
-        map_cols + border_size + border_size),
+        map_cols + border_size + border_size,
+        map_rows + border_size + border_size),
       "Parallel Actors");
 
   map_texture.create(map_cols, map_rows);
