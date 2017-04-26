@@ -54,6 +54,14 @@ sf::Texture map_texture;
 sf::Sprite map_sprite;
 sf::Event event;
 
+// Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
+const float zoomAmount{ 1.1f }; // zoom by 10%
+
+// Sourced from http://stackoverflow.com/a/41789414
+bool moving = false;
+sf::Vector2f oldPos;
+sf::View map_view;
+
 std::string GenerateID(){
   char new_id[ID_LEN + 1];
 
@@ -236,6 +244,9 @@ void LaunchWindow(){
 
   map_sprite.setPosition(border_size, border_size);
   map_sprite.setTexture(map_texture);
+
+  map_view = map_window->getDefaultView();
+
 }
 
 // moves waiting actors to current list
@@ -388,6 +399,86 @@ void DeleteDeadActors(){
   }
 }
 
+void zoomViewAt(sf::Vector2i pixel, sf::RenderWindow* window, float zoom)
+{
+  // Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
+  const sf::Vector2f beforeCoord{ window->mapPixelToCoords(pixel) };
+  map_view.zoom(zoom);
+  window->setView(map_view);
+  const sf::Vector2f afterCoord{ window->mapPixelToCoords(pixel) };
+  const sf::Vector2f offsetCoords{ beforeCoord - afterCoord };
+  map_view.move(offsetCoords);
+  window->setView(map_view);
+}
+
+void ParseEvent(sf::Event event){
+  switch(event.type){
+    case sf::Event::Closed :
+      {
+        map_window->close();
+        exit(0);
+        break;
+      }
+      // Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
+    case sf::Event::MouseWheelScrolled :
+      {
+        if (event.mouseWheelScroll.delta > 0) {
+          zoomViewAt({ event.mouseWheelScroll.x,
+              event.mouseWheelScroll.y },
+              map_window, (1.f / zoomAmount));
+        }
+        else if (event.mouseWheelScroll.delta < 0) {
+          zoomViewAt({ event.mouseWheelScroll.x,
+              event.mouseWheelScroll.y },
+              map_window, zoomAmount);
+        }
+        break;
+      }
+      // Sourced from http://stackoverflow.com/a/41789414
+    case sf::Event::MouseButtonPressed :
+      {
+        // Mouse button is pressed, get the position
+        // and set moving as active
+        if (event.mouseButton.button == 0) {
+          moving = true;
+          oldPos = map_window->mapPixelToCoords(sf::Vector2i(
+                event.mouseButton.x, event.mouseButton.y));
+        }
+        break;
+      }
+    case sf::Event::MouseButtonReleased :
+      {
+        // Mouse button is released, no longer move
+        if (event.mouseButton.button == 0) {
+          moving = false;
+        }
+        break;
+      }
+    case sf::Event::MouseMoved :
+      {
+        // Ignore mouse movement unless a button is pressed (see above)
+        if (!moving)
+          break;
+        // Determine the new position in world coordinates
+        const sf::Vector2f newPos = map_window->mapPixelToCoords(
+            sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
+        // Determine how the cursor has moved
+        // Swap these to invert the movement direction
+        const sf::Vector2f deltaPos = oldPos - newPos;
+
+        // Move our view accordingly and update the window
+        map_view.setCenter(map_view.getCenter() + deltaPos);
+        map_window->setView(map_view);
+
+        // Save the new position as the old one
+        // We're recalculating this, since we've changed the view
+        oldPos = map_window->mapPixelToCoords(sf::Vector2i(
+              event.mouseMove.x, event.mouseMove.y));
+        break;
+      }
+  }
+}
+
 void DisplayMap(){
   if (!gui){
     return;
@@ -395,10 +486,7 @@ void DisplayMap(){
   if(map_window->isOpen()){
 
     while(map_window->pollEvent(event)){
-      if (event.type == sf::Event::Closed) {
-        map_window->close();
-        exit(0);
-      }
+      ParseEvent(event);
     }
 
     map.SynchronizePixels();
