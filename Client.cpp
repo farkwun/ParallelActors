@@ -140,6 +140,8 @@ char * MovementPDU(){
 
   sprintf(PDU + MOVE_NEXT_COL_INDEX, "%d", next_move.get_col());
 
+  sprintf(PDU + MOVE_CURR_ROW_INDEX, "%d", position.get_row());
+
   return PDU;
 }
 

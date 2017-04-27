@@ -23,6 +23,8 @@
 #include <chrono>
 #include <thread>
 #include <SFML/Graphics.hpp>
+#include <mpi.h>
+#include <set>
 
 bool debug   = false;
 bool gui     = true;
@@ -36,14 +38,18 @@ socklen_t addr_len;
 pthread_t receive_manager_id;
 pthread_t map_manager_id;
 
+pthread_t input_forwarder_id;
+pthread_t output_forwarder_id;
+pthread_t gui_manager_id;
+
 char recvBuff[BUFLEN];
 char PDU_TYPE;
 char PDU_ID[ID_LEN + 1];
 char PDU_DATA[DATALEN];
 
 std::unordered_map<std::string, Actor> current_actors;
-std::unordered_map<std::string, struct sockaddr_in> new_actors;
-std::unordered_map<std::string, struct sockaddr_in> dead_actors;
+std::set<std::string> new_actors;
+std::set<std::string> dead_actors;
 
 Map map;
 
@@ -53,6 +59,27 @@ sf::Color win_bg_color = sf::Color::Black;
 sf::Texture map_texture;
 sf::Sprite map_sprite;
 sf::Event event;
+int bytes_per_pixel = 4;
+
+// MPI Stuff
+int world_size, world_rank, segment_rows, segment_cols, segment_size;
+int top_buf_edge_index = -1;
+int bot_buf_edge_index = -1;
+int start_index, end_index;
+bool root = false;
+static const int root_id = 0;
+char forwardBuff[BUFLEN];
+char * map_pixels = NULL;
+int pixel_count;
+
+std::unordered_map<std::string, struct sockaddr_in> routing_table;
+
+// MPI Funcs
+void MPISend(char * data, int length, MPI_Datatype type, int id);
+void MPIReceive(char * buffer, int length,  MPI_Datatype type, int id);
+int RandomRank();
+int DerivedRank(char * PDU);
+void DisplayMap();
 
 // Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
 const float zoomAmount{ 1.1f }; // zoom by 10%
@@ -77,6 +104,7 @@ std::string GenerateID(){
   new_id[ID_LEN] = '\0';
 
   std::string output_id(new_id);
+
   return output_id;
 }
 
@@ -122,7 +150,7 @@ void SendPDU(char * PDU, struct sockaddr_in in_address){
   free(PDU);
 }
 
-void UpdateActorMove(char * PDU, struct sockaddr_in address){
+void UpdateActorMove(char * PDU){
   std::string actor_id;
   Coordinate new_move;
   Actor * actor;
@@ -137,30 +165,31 @@ void UpdateActorMove(char * PDU, struct sockaddr_in address){
     }
     return;
   }
+  actor->set_timeout(false);
 
-  if (actor->get_address().sin_addr.s_addr == address.sin_addr.s_addr){
-    actor->set_timeout(false);
+  new_move.set_row(StoI(GetField(MOVE_NEXT_ROW_INDEX, PDU, MOVE_FIELD_LEN)));
+  new_move.set_col(StoI(GetField(MOVE_NEXT_COL_INDEX, PDU, MOVE_FIELD_LEN)));
 
-    new_move.set_row(StoI(GetField(MOVE_NEXT_ROW_INDEX, PDU, MOVE_FIELD_LEN)));
-    new_move.set_col(StoI(GetField(MOVE_NEXT_COL_INDEX, PDU, MOVE_FIELD_LEN)));
-
-    actor->set_next_move(new_move);
-  }
+  actor->set_next_move(new_move);
 }
 
-void RegisterNewActor(struct sockaddr_in address){
+void RegisterNewActor(char * PDU){
+  new_actors.insert(GetField(PDU_ID_INDEX, PDU, ID_LEN));
+}
+
+std::string SetIDforRoute(struct sockaddr_in address){
   std::string new_id;
   bool already_exists = true;
 
   while(already_exists){
     new_id = GenerateID();
-    if (current_actors.count(new_id) == 0
-        && new_actors.count(new_id)  == 0){
+    if (routing_table.count(new_id) == 0){
       already_exists = false;
     }
   }
 
-  new_actors[new_id] = address;
+  routing_table[new_id] = address;
+  return new_id;
 }
 
 // builds a Setup PDU for a given actor
@@ -207,6 +236,8 @@ char * VisionPDU(Actor actor){
   vision_grid = Unroll2DVector(map.GetSurroundings(actor.get_position()));
 
   PDU[PDU_TYPE_INDEX] = VISION;
+  strncpy(PDU + PDU_ID_INDEX, actor.get_id().c_str(), ID_LEN);
+
   PDU[VISION_COLLIDED_INDEX] = BooltoChar(actor.get_collided());
   PDU[VISION_ARRIVED_INDEX]  = BooltoChar(actor.get_arrived());
   PDU[VISION_TIMEOUT_INDEX]  = BooltoChar(actor.get_timeout());
@@ -221,6 +252,26 @@ char * VisionPDU(Actor actor){
 
   free(vision_grid);
   return PDU;
+}
+
+char * RegisterPDU(std::string id){
+  char * PDU;
+  PDU = (char *) malloc(BUFLEN);
+
+  PDU[PDU_TYPE_INDEX] = REGISTER;
+  strncpy(PDU + PDU_ID_INDEX, id.c_str(), ID_LEN);
+
+  return PDU;
+}
+
+// wrapping PDU before forwarding
+char * ForwardPDU(char * PDU){
+  char * forwardPDU;
+  forwardPDU = (char *) malloc(BUFLEN);
+
+  memcpy(forwardPDU, PDU, BUFLEN);
+
+  return forwardPDU;
 }
 
 void InitializeMap(){
@@ -256,26 +307,24 @@ void AddNewActors(){
   }
 
   std::string new_actor_id;
-  struct sockaddr_in new_actor_address;
-  std::unordered_map<std::string, struct sockaddr_in> temp(new_actors);
-  std::unordered_map<std::string, struct sockaddr_in>::iterator it;
+  std::set<std::string> temp(new_actors);
+  std::set<std::string>::iterator it;
 
   it = temp.begin();
 
   while(it != temp.end()){
-    new_actor_id      = it->first;
-    new_actor_address = it->second;
+    new_actor_id      = *it;
 
     Actor new_actor(new_actor_id, map.RandomEmptyLocation(),
-        map.RandomDestination(), new_actor_address);
+        map.RandomDestination());
 
     map.AddActor(new_actor);
 
     current_actors[new_actor_id] = new_actor;
 
-    SendPDU(SetupPDU(new_actor), new_actor.get_address());
+    MPISend(SetupPDU(new_actor), BUFLEN, MPI_CHAR, root_id);
 
-    SendPDU(VisionPDU(new_actor), new_actor.get_address());
+    MPISend(VisionPDU(new_actor), BUFLEN, MPI_CHAR, root_id);
 
     new_actors.erase(new_actor_id);
 
@@ -284,27 +333,24 @@ void AddNewActors(){
 }
 
 void ParseRecvdPDU(){
+  std::string id;
   bytes_read = recvfrom(sock,recvBuff,BUFLEN,0,
       (struct sockaddr *)&client_addr, &addr_len);
+
   PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
   if (debug){
     PrintPDU(recvBuff);
   }
   switch(PDU_TYPE){
     case REGISTER :
-      RegisterNewActor(client_addr);
+      id = SetIDforRoute(client_addr);
+      MPISend(RegisterPDU(id), BUFLEN, MPI_CHAR, RandomRank());;
       break;
     case MOVEMENT :
-      UpdateActorMove(recvBuff, client_addr);
+      MPISend(ForwardPDU(recvBuff), BUFLEN, MPI_CHAR, DerivedRank(recvBuff));
       break;
     default:
       break;
-  }
-}
-
-void *ReceiveManager(void *args){
-  while(1){
-    ParseRecvdPDU();
   }
 }
 
@@ -353,7 +399,7 @@ Actor MoveActor(Actor actor){
 Actor DetectCollision(Actor actor){
   actor = map.CheckCollision(actor);
   if(actor.get_collided()){
-    dead_actors[actor.get_id()] = actor.get_address();
+    dead_actors.insert(actor.get_id());
   }
   return actor;
 }
@@ -366,13 +412,13 @@ Actor CheckDestination(Actor actor){
   }
   if(actor.get_arrived()){
     // die happy
-    dead_actors[actor.get_id()] = actor.get_address();
+    dead_actors.insert(actor.get_id());
   }
   return actor;
 }
 
 Actor SendUpdate(Actor actor){
-  SendPDU(VisionPDU(actor), actor.get_address());
+  MPISend(VisionPDU(actor), BUFLEN, MPI_CHAR, root_id);
   return actor;
 }
 
@@ -383,13 +429,13 @@ void DeleteDeadActors(){
     return;
   }
 
-  std::unordered_map<std::string, struct sockaddr_in> temp(dead_actors);
-  std::unordered_map<std::string, struct sockaddr_in>::iterator it;
+  std::set<std::string> temp(dead_actors);
+  std::set<std::string>::iterator it;
 
   it = temp.begin();
 
   while(it != temp.end()){
-    dead_actor_id = it->first;
+    dead_actor_id = *it;
     if (current_actors.count(dead_actor_id) != 0){
       map.ClearActor(current_actors.at(dead_actor_id));
       current_actors.erase(dead_actor_id);
@@ -479,12 +525,123 @@ void ParseEvent(sf::Event event){
   }
 }
 
+void SendPixels(){
+  if (!gui){
+    return;
+  }
+  //TODO: MPI_Gather on Map pixels
+}
+
+void *MapManager(void *args){
+  while(1){
+    IterateCurrentActors(&PrintActor);
+    IterateCurrentActors(&SetTimeouts);
+    IterateCurrentActors(&MoveActor);
+    IterateCurrentActors(&DetectCollision);
+    IterateCurrentActors(&CheckDestination);
+    AddNewActors();
+    IterateCurrentActors(&SendUpdate);
+    DeleteDeadActors();
+    //SendPixels();
+    DisplayMap();
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+  }
+}
+
+void MPI_Initialize(){
+  // Get the number of processes
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+  // Get the rank of the process
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+}
+
+void MPIReceive(char * buffer, int length, MPI_Datatype type,  int id){
+  MPI_Recv(buffer, length, type, id, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+}
+
+void MPISend(char * data, int length, MPI_Datatype type, int id){
+  MPI_Send(data, length, type, id, 0, MPI_COMM_WORLD);
+  free(data);
+}
+
+int RandomRank(){
+  return (1 + (rand() % (world_size - 1)));
+}
+
+int DerivedRank(char * PDU){
+  int current_row = StoI(GetField(MOVE_CURR_ROW_INDEX, PDU, MOVE_FIELD_LEN));
+
+  // leverage 'truncation toward zero'
+  int derived_rank = current_row/segment_size;
+
+  // map machines begin at rank 1, not 0
+  return (derived_rank + 1);
+}
+
+void ParseMPIRecv(){
+  MPIReceive(recvBuff, BUFLEN, MPI_CHAR, root_id);
+
+  PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
+
+  if (debug){
+    PrintPDU(recvBuff);
+  }
+  switch(PDU_TYPE){
+    case REGISTER :
+      RegisterNewActor(recvBuff);
+      break;
+    case MOVEMENT :
+      UpdateActorMove(recvBuff);
+      break;
+    default:
+      break;
+  }
+}
+
+void *ReceiveManager(void *args){
+  while(1){
+    ParseMPIRecv();
+  }
+}
+
+void *InputForwarder(void *args){
+  while(1){
+    ParseRecvdPDU();
+  }
+}
+
+struct sockaddr_in GetAddressFromID(std::string id){
+  return routing_table[id];
+}
+
+void DeleteRouteForID(std::string id){
+  routing_table.erase(id);
+}
+
+void ForwardRecvdPacket(){
+  std::string id;
+  MPIReceive(forwardBuff, BUFLEN, MPI_CHAR, MPI_ANY_SOURCE);
+  id = GetField(PDU_ID_INDEX, forwardBuff, ID_LEN);
+  SendPDU(ForwardPDU(forwardBuff), GetAddressFromID(id));
+  if (forwardBuff[VISION_COLLIDED_INDEX] == TRUE ||
+      forwardBuff[VISION_ARRIVED_INDEX]  == TRUE){
+    DeleteRouteForID(id);
+  }
+}
+
+void *OutputForwarder(void *args){
+  while(1){
+    ForwardRecvdPacket();
+  }
+}
+
 void DisplayMap(){
   if (!gui){
     return;
   }
-  if(map_window->isOpen()){
 
+  if(map_window->isOpen()){
     while(map_window->pollEvent(event)){
       ParseEvent(event);
     }
@@ -499,19 +656,91 @@ void DisplayMap(){
   }
 }
 
-void *MapManager(void *args){
+void *GUIManager(void *args){
   while(1){
-    IterateCurrentActors(&PrintActor);
-    IterateCurrentActors(&SetTimeouts);
-    IterateCurrentActors(&MoveActor);
-    IterateCurrentActors(&DetectCollision);
-    IterateCurrentActors(&CheckDestination);
-    AddNewActors();
-    IterateCurrentActors(&SendUpdate);
-    DeleteDeadActors();
-    DisplayMap();
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+    //TODO: MPI_Gather on map pixels
   }
+}
+
+void SetRoleVars(){
+  if (world_rank == 0){
+    root = true;
+  }else {
+    root = false;
+  }
+}
+
+void GetMySegment(){
+  std::vector< std::vector<char> > the_map = map.get_map();
+  int map_rows = the_map.size();
+  int map_cols = the_map[0].size();
+  int vision_radius = map.get_vision_radius();
+  segment_rows = map_rows;
+  segment_cols = map_cols;
+  segment_size = map_rows/(world_size - 1);
+  start_index = (world_rank - 1) * segment_size;
+  end_index = (world_rank) * segment_size - 1;
+
+  std::vector< std::vector<char> > my_map;
+  std::vector<char> empty_row(map_cols, '0');
+
+  pixel_count = segment_size * map_cols * bytes_per_pixel;
+
+  int i,j,k;
+
+  if (root) {
+    return;
+  }
+
+  if (start_index != 0){
+    for (i = 0; i < vision_radius; i++){
+      my_map.push_back(empty_row);
+    }
+    top_buf_edge_index = i;
+  }
+
+  for (i = start_index; i <= end_index; i++){
+    my_map.push_back(the_map[i]);
+  }
+
+  if (world_rank == world_size - 1){
+    for (i = end_index + 1; i < map_rows; i++){
+      my_map.push_back(the_map[i]);
+    }
+    end_index = map_rows - 1;
+  }else{
+    for (i = 0; i < vision_radius; i++){
+      my_map.push_back(empty_row);
+    }
+    bot_buf_edge_index = my_map.size() - vision_radius - 1;
+  }
+  segment_rows = my_map.size();
+  segment_cols = my_map[0].size();
+
+  if (debug) {
+    printf("My rank is %d, my start index is %d, my end index is %d, my top_buf_edge is %d, and my bot_buf_edge is %d\n", world_rank, start_index, end_index, top_buf_edge_index, bot_buf_edge_index);
+  }
+  map = Map(my_map);
+  InitializeMap();
+}
+
+void LaunchThreads(){
+  GetMySegment();
+  if (root) {
+    pthread_create(&input_forwarder_id, NULL, &InputForwarder, NULL);
+    pthread_create(&output_forwarder_id, NULL, &OutputForwarder, NULL);
+    pthread_create(&gui_manager_id, NULL, &GUIManager, NULL);
+  }else {
+    LaunchWindow();
+    pthread_create(&receive_manager_id, NULL, &ReceiveManager, NULL);
+    pthread_create(&map_manager_id, NULL, &MapManager, NULL);
+  }
+}
+
+void run(){
+  InitializeMap();
+  SetRoleVars();
+  LaunchThreads();
 }
 
 int main(int argc, char *argv[])
@@ -519,10 +748,10 @@ int main(int argc, char *argv[])
   char recv_data[BUFLEN];
   const char *service = "3000";
 
-  if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-    perror("Socket");
-    exit(1);
-  }
+  int provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+
+  MPI_Initialize();
 
   switch (argc) {
     case 1:
@@ -534,41 +763,45 @@ int main(int argc, char *argv[])
       fprintf(stderr, "usage: udpserver [port]\n");
   }
 
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons((u_short)atoi(service));
-  server_addr.sin_addr.s_addr = INADDR_ANY;
-  bzero(&(server_addr.sin_zero),8);
+  if (world_rank == 0){
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+      perror("Socket");
+      exit(1);
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons((u_short)atoi(service));
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(server_addr.sin_zero),8);
 
 
-  if (bind(sock,(struct sockaddr *)&server_addr,
-        sizeof(struct sockaddr)) == -1)
-  {
-    perror("Bind");
-    exit(1);
+    if (bind(sock,(struct sockaddr *)&server_addr,
+          sizeof(struct sockaddr)) == -1)
+    {
+      perror("Bind");
+      exit(1);
+    }
+
+    addr_len = sizeof(struct sockaddr);
+
+    if (debug){
+      printf("\nUDPServer Waiting for client on port ");
+      printf(service);
+      printf("\n");
+    }
+    fflush(stdout);
   }
-
-  addr_len = sizeof(struct sockaddr);
 
   // initialize seed for rand()
   srand(time(0));
 
-  if (debug){
-    printf("\nUDPServer Waiting for client on port ");
-    printf(service);
-    printf("\n");
-  }
-  fflush(stdout);
-
-  InitializeMap();
-  LaunchWindow();
-
-  pthread_create(&receive_manager_id, NULL, &ReceiveManager, NULL);
-  pthread_create(&map_manager_id, NULL, &MapManager, NULL);
+  run();
 
   while(1){
     sleep(1);
   }
 
+  MPI_Finalize();
   printf("Should never get here");
 
   return 0;

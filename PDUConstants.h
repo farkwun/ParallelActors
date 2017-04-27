@@ -32,16 +32,17 @@ const static int SETUP_CURR_COL_INDEX = 41;
 const static int SETUP_DEST_ROW_INDEX = 51;
 const static int SETUP_DEST_COL_INDEX = 61;
 
-const static int VISION_SEQ_NUM_INDEX  = 1;
-const static int VISION_COLLIDED_INDEX = 2;
-const static int VISION_ARRIVED_INDEX  = 3;
-const static int VISION_TIMEOUT_INDEX  = 4;
-const static int VISION_CURR_ROW_INDEX = 5;
-const static int VISION_CURR_COL_INDEX = 15;
-const static int VISION_GRID_INDEX     = 25;
+const static int VISION_SEQ_NUM_INDEX  = 11;
+const static int VISION_COLLIDED_INDEX = 12;
+const static int VISION_ARRIVED_INDEX  = 13;
+const static int VISION_TIMEOUT_INDEX  = 14;
+const static int VISION_CURR_ROW_INDEX = 15;
+const static int VISION_CURR_COL_INDEX = 25;
+const static int VISION_GRID_INDEX     = 35;
 
 const static int MOVE_SEQ_INDEX = 11;
 const static int MOVE_NEXT_ROW_INDEX = 12;
 const static int MOVE_NEXT_COL_INDEX = 22;
+const static int MOVE_CURR_ROW_INDEX = 32;
 
 #endif /* PDUCONSTANTS_H */

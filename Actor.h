@@ -13,7 +13,6 @@
 // the class
 class Actor {
   private: 
-    struct sockaddr_in address;
     Coordinate position;
     Coordinate destination;
     Coordinate next_move;
@@ -22,10 +21,10 @@ class Actor {
     bool timeout      = false;
     bool collided     = false;
     std::string id;
+    int row_offset;
   public:
     Actor();
-    Actor(std::string id, Coordinate position, Coordinate destination, struct sockaddr_in sock_addr);
-    struct sockaddr_in get_address();
+    Actor(std::string id, Coordinate position, Coordinate destination);
     Coordinate get_position();
     Coordinate get_destination();
     Coordinate get_next_move();

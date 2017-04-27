@@ -117,8 +117,9 @@ void Map::SynchronizePixels(){
   int num_rows, num_cols, col, row, pindex;
   num_rows = map.size();
   num_cols = map[0].size();
+  num_pixels = num_cols * num_rows * bytes_per_pixel;
   if (map_pixels == NULL){
-    map_pixels = new sf::Uint8[num_cols * num_rows * bytes_per_pixel];
+    map_pixels = new sf::Uint8[num_pixels];
   }
 
   for (row = 0; row < num_rows; row++){
@@ -153,6 +154,10 @@ sf::Uint8 * Map::get_map_pixels(){
   return map_pixels;
 }
 
+int Map::get_num_pixels(){
+  return num_pixels;
+}
+
 int Map::get_map_rows(){
   return map_rows;
 }
@@ -163,6 +168,10 @@ int Map::get_map_cols(){
 
 int Map::get_total_surroundings_grid_size(){
   return total_surroundings_grid_size;
+}
+
+int Map::get_vision_radius(){
+  return vision_radius;
 }
 
 int Map::get_step_size(){

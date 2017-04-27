@@ -59,6 +59,7 @@ void Print(void (*f) (char *), char * PDU){
 
 void Register(char * PDU){
   std::cout << "REGISTRATION PACKET!" << std::endl;
+  std::cout << "Registration ID : " << GetField(PDU_ID_INDEX, PDU, ID_LEN) << std::endl;
 }
 
 void Setup(char * PDU){
@@ -97,6 +98,7 @@ void Movement(char * PDU){
   std::cout << "SEQ NUM     : " << (int)PDU[MOVE_SEQ_INDEX] << std::endl;
   std::cout << "MOVE TO ROW : " << GetField(MOVE_NEXT_ROW_INDEX, PDU, len)  << std::endl;
   std::cout << "MOVE TO COL : " << GetField(MOVE_NEXT_COL_INDEX, PDU, len)  << std::endl;
+  std::cout << "CURRENT ROW : " << GetField(MOVE_CURR_ROW_INDEX, PDU, len)  << std::endl;
 }
 
 void Default(char * PDU){

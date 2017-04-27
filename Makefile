@@ -1,4 +1,4 @@
-CPP = g++
+CPP = mpic++
 CFLAGS = -std=c++11 -lsfml-graphics -lsfml-window -lsfml-system
 
 TARGETS = Coordinate.o Coordinate.h.gch Actor.h.gch Actor.o Map.o Map.h.gch Server.o Client.o server client

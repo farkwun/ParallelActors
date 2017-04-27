@@ -41,6 +41,7 @@ class Map {
     int vision_radius;
     int total_surroundings_grid_size;
     int step_size;
+    int num_pixels;
     void seed_engine();
     unsigned char get_pixel_for_char(char map_char, int pixel_type);
     bool AddActorCases(int row, int col);
@@ -59,9 +60,11 @@ class Map {
     void set_step_size(int new_step_size);
     void set_vision_radius(int new_radius);
     int  get_total_surroundings_grid_size();
+    int  get_vision_radius();
     int  get_step_size();
     std::vector< std::vector<char> > get_map();
     sf::Uint8 * get_map_pixels();
+    int get_num_pixels();
     int get_map_rows();
     int get_map_cols();
     void set_map(std::vector< std::vector<char> > new_map);
