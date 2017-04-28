@@ -45,6 +45,7 @@ class Map {
     bool RandomEmptyLocationCases(int row, int col);
     bool IsValidStep(Coordinate old_pos, Coordinate new_pos);
   public:
+    int true_map_rows = 300;
     const static char DELIM = 0;
     const static int R = 0;
     const static int G = 1;

@@ -423,7 +423,7 @@ bool Map::RandomEmptyLocationCases(int row, int col){
 Coordinate Map::RandomDestination(){
   int row, col;
   Coordinate destination;
-  std::uniform_int_distribution<int> distrRow(0, map_rows);
+  std::uniform_int_distribution<int> distrRow(0, true_map_rows);
   std::uniform_int_distribution<int> distrCol(0, map_cols);
 
   row = distrRow(engine);

@@ -7,16 +7,21 @@ Actor::Actor(){
   position    = coordinate;
   destination = coordinate;
   id          = "";
+  row_offset  = 0;
 }
 
-Actor::Actor(std::string id, Coordinate position, Coordinate destination){
+Actor::Actor(std::string id, Coordinate position, Coordinate destination, int row_offset){
   this->position    = position;
   this->destination = destination;
   this->id          = id;
+  this->row_offset  = row_offset;
 }
 
 Coordinate Actor::get_position(){
-  return position;
+  Coordinate offset_position;
+  offset_position.set_row(position.get_row() - row_offset);
+  offset_position.set_col(position.get_col());
+  return offset_position;
 }
 
 Coordinate Actor::get_destination(){
@@ -24,6 +29,17 @@ Coordinate Actor::get_destination(){
 }
 
 Coordinate Actor::get_next_move(){
+  Coordinate offset_move;
+  offset_move.set_row(next_move.get_row() - row_offset);
+  offset_move.set_col(next_move.get_col());
+  return offset_move;
+}
+
+Coordinate Actor::get_true_position(){
+  return position;
+}
+
+Coordinate Actor::get_true_next_move(){
   return next_move;
 }
 
@@ -48,7 +64,10 @@ std::string Actor::get_id(){
 }
 
 void Actor::set_position(Coordinate new_position){
-  position = new_position;
+  Coordinate offset_new_position;
+  offset_new_position.set_row(new_position.get_row() + row_offset);
+  offset_new_position.set_col(new_position.get_col());
+  position = offset_new_position;
 }
 
 void Actor::set_destination(Coordinate new_destination){

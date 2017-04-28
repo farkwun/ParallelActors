@@ -76,6 +76,8 @@ char forwardBuff[BUFLEN];
 
 std::unordered_map<std::string, struct sockaddr_in> routing_table;
 
+int my_offset;
+
 // MPI Funcs
 void MPISend(char * data, int length, MPI_Datatype type, int id, int tag);
 void MPIReceive(char * buffer, int length,  MPI_Datatype type, int id, int tag);
@@ -215,9 +217,9 @@ char * SetupPDU(Actor actor){
 
   sprintf(PDU + SETUP_STEP_INDEX,"%d",map.get_step_size());
 
-  sprintf(PDU + SETUP_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
+  sprintf(PDU + SETUP_CURR_ROW_INDEX,"%d",actor.get_true_position().get_row());
 
-  sprintf(PDU + SETUP_CURR_COL_INDEX,"%d",actor.get_position().get_col());
+  sprintf(PDU + SETUP_CURR_COL_INDEX,"%d",actor.get_true_position().get_col());
 
   sprintf(PDU + SETUP_DEST_ROW_INDEX,"%d",actor.get_destination().get_row());
 
@@ -249,9 +251,9 @@ char * VisionPDU(Actor actor){
   PDU[VISION_ARRIVED_INDEX]  = BooltoChar(actor.get_arrived());
   PDU[VISION_TIMEOUT_INDEX]  = BooltoChar(actor.get_timeout());
 
-  sprintf(PDU + VISION_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
+  sprintf(PDU + VISION_CURR_ROW_INDEX,"%d",actor.get_true_position().get_row());
 
-  sprintf(PDU + VISION_CURR_COL_INDEX,"%d",actor.get_position().get_col());
+  sprintf(PDU + VISION_CURR_COL_INDEX,"%d",actor.get_true_position().get_col());
 
   for (int i = VISION_GRID_INDEX; i < VISION_GRID_INDEX + strlen(vision_grid); i++){
     PDU[i] = vision_grid[i-VISION_GRID_INDEX];
@@ -322,8 +324,12 @@ void AddNewActors(){
   while(it != temp.end()){
     new_actor_id      = *it;
 
-    Actor new_actor(new_actor_id, map.RandomEmptyLocation(),
-        map.RandomDestination());
+    Coordinate start       = map.RandomEmptyLocation();
+    Coordinate destination = map.RandomDestination();
+
+    start.set_row(start.get_row() + my_offset);
+
+    Actor new_actor(new_actor_id, start, destination, my_offset);
 
     map.AddActor(new_actor);
 
@@ -592,7 +598,8 @@ void MPISend(int * data, int length, MPI_Datatype type, int id, int tag){
 }
 
 int RandomRank(){
-  return (1 + (rand() % (world_size - 1)));
+  int random_rank =  (1 + (rand() % (world_size - 1)));
+  return random_rank;
 }
 
 int DerivedRank(char * PDU){
@@ -602,7 +609,9 @@ int DerivedRank(char * PDU){
   int derived_rank = current_row/segment_size;
 
   // map machines begin at rank 1, not 0
-  return (derived_rank + 1);
+  derived_rank += 1;
+
+  return derived_rank;
 }
 
 void ParseMPIRecv(){
@@ -815,6 +824,12 @@ void GetMySegment(){
   }
   segment_rows = my_map.size();
   segment_cols = my_map[0].size();
+
+  if (world_rank == 1){
+    my_offset = 0;
+  }else{
+    my_offset = start_index - top_buf_edge_index;
+  }
 
   if (debug) {
     printf("My rank is %d, my start index is %d, my end index is %d, my top_buf_edge is %d, and my bot_buf_edge is %d\n", world_rank, start_index, end_index, top_buf_edge_index, bot_buf_edge_index);
