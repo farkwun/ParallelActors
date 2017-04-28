@@ -52,7 +52,7 @@ class Map {
     const static int A = 3;
     Map();
     Map(std::vector< std::vector<char> > input_map);
-    std::vector<int> Compress2DVectorTo1D(std::vector< std::vector<char> > input);
+    std::vector<int> Compress2DVectorTo1D(int start_ind, int end_ind, std::vector< std::vector<char> > input);
     void InitializeActorDimensions();
     void InitializeActorDimensions(int in_actor_half_rows, int in_actor_half_cols);
     void InitializeVision();

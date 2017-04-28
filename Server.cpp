@@ -536,7 +536,13 @@ void SendPixels(){
   if (!gui){
     return;
   }
-  std::vector<int> send = map.Compress2DVectorTo1D(map.get_map());
+  int start, end;
+  start = top_buf_edge_index;
+  end   = end_index - start_index;
+  if (top_buf_edge_index < 0){
+    start = start_index;
+  }
+  std::vector<int> send = map.Compress2DVectorTo1D(start, end, map.get_map());
 
   MPI_Send(&send.front(), send.size(), MPI_INT, 0, MAP_TAG, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -701,14 +707,15 @@ std::vector< std::vector<char> > GatherSegments(){
   int * received_vector;
   MPI_Status status;
   for (i = 1; i < world_size; i++){
+    received_vector = NULL;
     MPI_Probe(i, 1, MPI_COMM_WORLD, &status);
     MPI_Get_count(&status, MPI_INT, &amount);
     received_vector = (int *) malloc (sizeof(int) * amount);
     MPIReceive(received_vector, amount, MPI_INT, i, MAP_TAG);
     std::vector<int> data(received_vector, received_vector + amount);
     compressed_map.push_back(data);
+    free(received_vector);
   }
-  free(received_vector);
   std::vector< std::vector<char> > new_map;
   std::vector<int> temp;
   for (int i = 0; i < compressed_map.size(); i++)

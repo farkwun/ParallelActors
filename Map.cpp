@@ -27,7 +27,7 @@ void Map::seed_engine(){
   engine.seed(std::random_device{}());
 }
 
-std::vector<int> Map::Compress2DVectorTo1D(std::vector< std::vector<char> > input){
+std::vector<int> Map::Compress2DVectorTo1D(int start_ind, int end_ind, std::vector< std::vector<char> > input){
   int input_rows = input.size();
   int input_cols = input[0].size();
   int row, col;
@@ -35,7 +35,7 @@ std::vector<int> Map::Compress2DVectorTo1D(std::vector< std::vector<char> > inpu
   int current_value;
   int current_count;
   std::vector<int> compressed;
-  for (row = 0; row < input_rows; row++){
+  for (row = start_ind; row <= end_ind; row++){
     current_count = 0;
     current_value = (int)input[row][0];
     for (col = 0; col < input_cols; col++){
