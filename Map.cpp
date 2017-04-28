@@ -27,6 +27,37 @@ void Map::seed_engine(){
   engine.seed(std::random_device{}());
 }
 
+std::vector<int> Map::Compress2DVectorTo1D(std::vector< std::vector<char> > input){
+  int input_rows = input.size();
+  int input_cols = input[0].size();
+  int row, col;
+  int input_value;
+  int current_value;
+  int current_count;
+  std::vector<int> compressed;
+  for (row = 0; row < input_rows; row++){
+    current_count = 0;
+    current_value = (int)input[row][0];
+    for (col = 0; col < input_cols; col++){
+      input_value = (int)input[row][col];
+      if (current_value != input_value){
+        compressed.push_back(current_count);
+        compressed.push_back(current_value);
+        current_value = input_value;
+        current_count = 1;
+      }else{
+        current_count++;
+      }
+    }
+    compressed.push_back(current_count);
+    compressed.push_back(current_value);
+    compressed.push_back(DELIM);
+  }
+  compressed.push_back(current_count);
+  compressed.push_back(current_value);
+  return compressed;
+}
+
 unsigned char Map::get_pixel_for_char(char map_char, int pixel_type){
   unsigned char pixel_val;
   if (pixel_type == A){
@@ -179,6 +210,8 @@ int Map::get_step_size(){
 }
 
 void Map::set_map(std::vector< std::vector<char> > new_map){
+  map_rows = new_map.size();
+  map_cols = new_map[0].size();
   map = new_map;
   SynchronizePixels();
 }

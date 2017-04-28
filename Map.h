@@ -26,10 +26,6 @@ class Map {
     const static int default_vision_radius = 5;
     const static int default_actor_half_rows = 2;
     const static int default_actor_half_cols = 2;
-    const static int R = 0;
-    const static int G = 1;
-    const static int B = 2;
-    const static int A = 3;
     const static int bytes_per_pixel = 4;
     std::vector< std::vector<char> > map;
     sf::Uint8 * map_pixels = NULL;
@@ -43,15 +39,20 @@ class Map {
     int step_size;
     int num_pixels;
     void seed_engine();
-    unsigned char get_pixel_for_char(char map_char, int pixel_type);
     bool AddActorCases(int row, int col);
     bool ClearActorCases(int row, int col);
     bool CheckCollisionCases(int row, int col);
     bool RandomEmptyLocationCases(int row, int col);
     bool IsValidStep(Coordinate old_pos, Coordinate new_pos);
   public:
+    const static char DELIM = 0;
+    const static int R = 0;
+    const static int G = 1;
+    const static int B = 2;
+    const static int A = 3;
     Map();
     Map(std::vector< std::vector<char> > input_map);
+    std::vector<int> Compress2DVectorTo1D(std::vector< std::vector<char> > input);
     void InitializeActorDimensions();
     void InitializeActorDimensions(int in_actor_half_rows, int in_actor_half_cols);
     void InitializeVision();
@@ -64,6 +65,7 @@ class Map {
     int  get_step_size();
     std::vector< std::vector<char> > get_map();
     sf::Uint8 * get_map_pixels();
+    unsigned char get_pixel_for_char(char map_char, int pixel_type);
     int get_num_pixels();
     int get_map_rows();
     int get_map_cols();

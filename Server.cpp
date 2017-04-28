@@ -25,6 +25,7 @@
 #include <SFML/Graphics.hpp>
 #include <mpi.h>
 #include <set>
+#include <mutex>
 
 bool debug   = false;
 bool gui     = true;
@@ -41,6 +42,8 @@ pthread_t map_manager_id;
 pthread_t input_forwarder_id;
 pthread_t output_forwarder_id;
 pthread_t gui_manager_id;
+
+std::mutex rt_mtx;
 
 char recvBuff[BUFLEN];
 char PDU_TYPE;
@@ -59,7 +62,6 @@ sf::Color win_bg_color = sf::Color::Black;
 sf::Texture map_texture;
 sf::Sprite map_sprite;
 sf::Event event;
-int bytes_per_pixel = 4;
 
 // MPI Stuff
 int world_size, world_rank, segment_rows, segment_cols, segment_size;
@@ -68,18 +70,21 @@ int bot_buf_edge_index = -1;
 int start_index, end_index;
 bool root = false;
 static const int root_id = 0;
+static const int DEFAULT_TAG = 0;
+static const int MAP_TAG = 1;
 char forwardBuff[BUFLEN];
-char * map_pixels = NULL;
-int pixel_count;
 
 std::unordered_map<std::string, struct sockaddr_in> routing_table;
 
 // MPI Funcs
-void MPISend(char * data, int length, MPI_Datatype type, int id);
-void MPIReceive(char * buffer, int length,  MPI_Datatype type, int id);
+void MPISend(char * data, int length, MPI_Datatype type, int id, int tag);
+void MPIReceive(char * buffer, int length,  MPI_Datatype type, int id, int tag);
+void MPISend(int * data, int length, MPI_Datatype type, int id, int tag);
+void MPIReceive(int * buffer, int length,  MPI_Datatype type, int id, int tag);
 int RandomRank();
 int DerivedRank(char * PDU);
 void DisplayMap();
+std::vector< std::vector<char> > GatherSegments();
 
 // Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
 const float zoomAmount{ 1.1f }; // zoom by 10%
@@ -180,6 +185,8 @@ void RegisterNewActor(char * PDU){
 std::string SetIDforRoute(struct sockaddr_in address){
   std::string new_id;
   bool already_exists = true;
+
+  std::lock_guard<std::mutex> guard(rt_mtx);
 
   while(already_exists){
     new_id = GenerateID();
@@ -322,9 +329,9 @@ void AddNewActors(){
 
     current_actors[new_actor_id] = new_actor;
 
-    MPISend(SetupPDU(new_actor), BUFLEN, MPI_CHAR, root_id);
+    MPISend(SetupPDU(new_actor), BUFLEN, MPI_CHAR, root_id, DEFAULT_TAG);
 
-    MPISend(VisionPDU(new_actor), BUFLEN, MPI_CHAR, root_id);
+    MPISend(VisionPDU(new_actor), BUFLEN, MPI_CHAR, root_id, DEFAULT_TAG);
 
     new_actors.erase(new_actor_id);
 
@@ -344,10 +351,10 @@ void ParseRecvdPDU(){
   switch(PDU_TYPE){
     case REGISTER :
       id = SetIDforRoute(client_addr);
-      MPISend(RegisterPDU(id), BUFLEN, MPI_CHAR, RandomRank());;
+      MPISend(RegisterPDU(id), BUFLEN, MPI_CHAR, RandomRank(), DEFAULT_TAG);;
       break;
     case MOVEMENT :
-      MPISend(ForwardPDU(recvBuff), BUFLEN, MPI_CHAR, DerivedRank(recvBuff));
+      MPISend(ForwardPDU(recvBuff), BUFLEN, MPI_CHAR, DerivedRank(recvBuff), DEFAULT_TAG);
       break;
     default:
       break;
@@ -418,7 +425,7 @@ Actor CheckDestination(Actor actor){
 }
 
 Actor SendUpdate(Actor actor){
-  MPISend(VisionPDU(actor), BUFLEN, MPI_CHAR, root_id);
+  MPISend(VisionPDU(actor), BUFLEN, MPI_CHAR, root_id, DEFAULT_TAG);
   return actor;
 }
 
@@ -529,7 +536,10 @@ void SendPixels(){
   if (!gui){
     return;
   }
-  //TODO: MPI_Gather on Map pixels
+  std::vector<int> send = map.Compress2DVectorTo1D(map.get_map());
+
+  MPI_Send(&send.front(), send.size(), MPI_INT, 0, MAP_TAG, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void *MapManager(void *args){
@@ -542,8 +552,7 @@ void *MapManager(void *args){
     AddNewActors();
     IterateCurrentActors(&SendUpdate);
     DeleteDeadActors();
-    //SendPixels();
-    DisplayMap();
+    SendPixels();
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
   }
 }
@@ -556,12 +565,23 @@ void MPI_Initialize(){
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 }
 
-void MPIReceive(char * buffer, int length, MPI_Datatype type,  int id){
-  MPI_Recv(buffer, length, type, id, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+void MPIReceive(char * buffer, int length, MPI_Datatype type,  int id, int tag){
+  MPI_Recv(buffer, length, type, id, tag,
+      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
-void MPISend(char * data, int length, MPI_Datatype type, int id){
-  MPI_Send(data, length, type, id, 0, MPI_COMM_WORLD);
+void MPIReceive(int * buffer, int length, MPI_Datatype type,  int id, int tag){
+  MPI_Recv(buffer, length, type, id, tag,
+      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+}
+
+void MPISend(char * data, int length, MPI_Datatype type, int id, int tag){
+  MPI_Send(data, length, type, id, tag, MPI_COMM_WORLD);
+  free(data);
+}
+
+void MPISend(int * data, int length, MPI_Datatype type, int id, int tag){
+  MPI_Send(data, length, type, id, tag, MPI_COMM_WORLD);
   free(data);
 }
 
@@ -580,7 +600,7 @@ int DerivedRank(char * PDU){
 }
 
 void ParseMPIRecv(){
-  MPIReceive(recvBuff, BUFLEN, MPI_CHAR, root_id);
+  MPIReceive(recvBuff, BUFLEN, MPI_CHAR, root_id, DEFAULT_TAG);
 
   PDU_TYPE = recvBuff[PDU_TYPE_INDEX];
 
@@ -612,16 +632,18 @@ void *InputForwarder(void *args){
 }
 
 struct sockaddr_in GetAddressFromID(std::string id){
+  std::lock_guard<std::mutex> guard(rt_mtx);
   return routing_table[id];
 }
 
 void DeleteRouteForID(std::string id){
+  std::lock_guard<std::mutex> guard(rt_mtx);
   routing_table.erase(id);
 }
 
 void ForwardRecvdPacket(){
   std::string id;
-  MPIReceive(forwardBuff, BUFLEN, MPI_CHAR, MPI_ANY_SOURCE);
+  MPIReceive(forwardBuff, BUFLEN, MPI_CHAR, MPI_ANY_SOURCE, DEFAULT_TAG);
   id = GetField(PDU_ID_INDEX, forwardBuff, ID_LEN);
   SendPDU(ForwardPDU(forwardBuff), GetAddressFromID(id));
   if (forwardBuff[VISION_COLLIDED_INDEX] == TRUE ||
@@ -636,17 +658,88 @@ void *OutputForwarder(void *args){
   }
 }
 
+void CreateImageFromMap(sf::Uint8 * image, std::vector< std::vector<char> > in_map){
+  int num_rows, num_cols, col, row, pindex;
+  int bytes_per_pixel = 4;
+  num_rows = in_map.size();
+  num_cols = in_map[0].size();
+  int num_pixels = num_cols * num_rows * bytes_per_pixel;
+  image = new sf::Uint8[num_pixels];
+
+  for (row = 0; row < num_rows; row++){
+    for (col = 0; col < num_cols; col++){
+      pindex = (row * num_cols + col) * bytes_per_pixel;
+
+      image[pindex+map.R] = map.get_pixel_for_char(in_map[row][col], map.R);
+      image[pindex+map.G] = map.get_pixel_for_char(in_map[row][col], map.G);
+      image[pindex+map.B] = map.get_pixel_for_char(in_map[row][col], map.B);
+      image[pindex+map.A] = map.get_pixel_for_char(in_map[row][col], map.A);
+    }
+  }
+}
+
+std::vector<char> DecompressRow(std::vector<int> compress_row){
+  int size = compress_row.size();
+  int i = 0;
+  int j;
+  char curr_char;
+  int num_chars;
+  std::vector<char> decompress_row;
+  while (i < size){
+    num_chars = compress_row[i];
+    curr_char = compress_row[i+1];
+    for (j = 0; j < num_chars; j++){
+      decompress_row.push_back(curr_char);
+    }
+    i += 2;
+  }
+  return decompress_row;
+}
+std::vector< std::vector<char> > GatherSegments(){
+  int i, amount;
+  std::vector< std::vector<int> > compressed_map;
+  int * received_vector;
+  MPI_Status status;
+  for (i = 1; i < world_size; i++){
+    MPI_Probe(i, 1, MPI_COMM_WORLD, &status);
+    MPI_Get_count(&status, MPI_INT, &amount);
+    received_vector = (int *) malloc (sizeof(int) * amount);
+    MPIReceive(received_vector, amount, MPI_INT, i, MAP_TAG);
+    std::vector<int> data(received_vector, received_vector + amount);
+    compressed_map.push_back(data);
+  }
+  free(received_vector);
+  std::vector< std::vector<char> > new_map;
+  std::vector<int> temp;
+  for (int i = 0; i < compressed_map.size(); i++)
+  {
+    for (int j = 0; j < compressed_map[i].size(); j++)
+    {
+      if (compressed_map[i][j] == map.DELIM){
+        new_map.push_back(DecompressRow(temp));
+        temp.clear();
+      }else{
+        temp.push_back(compressed_map[i][j]);
+      }
+    }
+  }
+  return new_map;
+}
+
 void DisplayMap(){
   if (!gui){
     return;
   }
+
+  sf::Uint8 * image;
 
   if(map_window->isOpen()){
     while(map_window->pollEvent(event)){
       ParseEvent(event);
     }
 
-    map.SynchronizePixels();
+    map.set_map(GatherSegments());
+    InitializeMap();
 
     map_texture.update(map.get_map_pixels());
 
@@ -654,11 +747,12 @@ void DisplayMap(){
     map_window->draw(map_sprite);
     map_window->display();
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void *GUIManager(void *args){
   while(1){
-    //TODO: MPI_Gather on map pixels
+    DisplayMap();
   }
 }
 
@@ -683,8 +777,6 @@ void GetMySegment(){
 
   std::vector< std::vector<char> > my_map;
   std::vector<char> empty_row(map_cols, '0');
-
-  pixel_count = segment_size * map_cols * bytes_per_pixel;
 
   int i,j,k;
 
@@ -727,11 +819,11 @@ void GetMySegment(){
 void LaunchThreads(){
   GetMySegment();
   if (root) {
+    LaunchWindow();
     pthread_create(&input_forwarder_id, NULL, &InputForwarder, NULL);
     pthread_create(&output_forwarder_id, NULL, &OutputForwarder, NULL);
     pthread_create(&gui_manager_id, NULL, &GUIManager, NULL);
   }else {
-    LaunchWindow();
     pthread_create(&receive_manager_id, NULL, &ReceiveManager, NULL);
     pthread_create(&map_manager_id, NULL, &MapManager, NULL);
   }
