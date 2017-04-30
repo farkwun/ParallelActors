@@ -79,6 +79,8 @@ class Map {
     bool out_of_bounds(int row, int col);
     Coordinate RandomEmptyLocation();
     Coordinate RandomDestination();
+    Coordinate RandomEmptyLocationInRange(int start_row, int end_row, int start_col, int end_col);
+    Coordinate RandomDestinationInRange(int start_row, int end_row, int start_col, int end_col);
     bool IterateThroughActorDimensions(Coordinate coordinate, bool (Map::*f)(int, int));
 };
 

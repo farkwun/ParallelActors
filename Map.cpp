@@ -390,12 +390,28 @@ bool Map::out_of_bounds(int row, int col){
   return out_of_bounds;
 }
 
-
 Coordinate Map::RandomEmptyLocation(){
   int row, col;
   Coordinate test_coordinate;
   std::uniform_int_distribution<int> distrRow(0, map_rows);
   std::uniform_int_distribution<int> distrCol(0, map_cols);
+  bool (Map::*cases)(int, int);
+  cases = &Map::RandomEmptyLocationCases;
+  bool IsOccupied = true;
+  while (IsOccupied){
+    row = distrRow(engine);
+    col = distrCol(engine);
+    test_coordinate.set_row_col(row, col);
+    IsOccupied = IterateThroughActorDimensions(test_coordinate, cases);
+  }
+  return test_coordinate;
+}
+
+Coordinate Map::RandomEmptyLocationInRange(int start_row, int end_row, int start_col, int end_col){
+  int row, col;
+  Coordinate test_coordinate;
+  std::uniform_int_distribution<int> distrRow(start_row, end_row);
+  std::uniform_int_distribution<int> distrCol(start_col, end_col);
   bool (Map::*cases)(int, int);
   cases = &Map::RandomEmptyLocationCases;
   bool IsOccupied = true;
@@ -420,11 +436,25 @@ bool Map::RandomEmptyLocationCases(int row, int col){
   }
 }
 
+
 Coordinate Map::RandomDestination(){
   int row, col;
   Coordinate destination;
   std::uniform_int_distribution<int> distrRow(0, map_rows);
   std::uniform_int_distribution<int> distrCol(0, map_cols);
+
+  row = distrRow(engine);
+  col = distrCol(engine);
+  destination.set_row_col(row, col);
+
+  return destination;
+}
+
+Coordinate Map::RandomDestinationInRange(int start_row, int end_row, int start_col, int end_col){
+  int row, col;
+  Coordinate destination;
+  std::uniform_int_distribution<int> distrRow(start_row, end_row);
+  std::uniform_int_distribution<int> distrCol(start_col, end_col);
 
   row = distrRow(engine);
   col = distrCol(engine);
