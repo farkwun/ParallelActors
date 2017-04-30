@@ -69,6 +69,7 @@ int world_size, world_rank, segment_rows, segment_cols, segment_size;
 int top_buf_edge_index = -1;
 int bot_buf_edge_index = -1;
 int start_index, end_index;
+int segment_start_index, segment_end_index;
 bool root = false;
 static const int root_id = 0;
 static const int DEFAULT_TAG  = 0;
@@ -367,6 +368,7 @@ void AddNewActors(){
     new_actor_id      = *it;
 
     Coordinate start       = map.RandomEmptyLocation();
+
     Coordinate destination = original_map.RandomDestination();
 
     Actor new_actor(new_actor_id, start, destination, my_offset);
@@ -592,13 +594,8 @@ void SendPixels(){
   if (!gui){
     return;
   }
-  int start, end;
-  start = top_buf_edge_index;
-  end   = end_index - start_index;
-  if (top_buf_edge_index < 0){
-    start = start_index;
-  }
-  std::vector<int> send = map.Compress2DVectorTo1D(start, end, map.get_map());
+
+  std::vector<int> send = map.Compress2DVectorTo1D(segment_start_index, segment_end_index, map.get_map());
 
   MPI_Send(&send.front(), send.size(), MPI_INT, 0, MAP_TAG, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -886,6 +883,13 @@ void GetMySegment(){
   if (debug) {
     printf("My rank is %d, my start index is %d, my end index is %d, my top_buf_edge is %d, and my bot_buf_edge is %d\n", world_rank, start_index, end_index, top_buf_edge_index, bot_buf_edge_index);
   }
+
+  segment_start_index = top_buf_edge_index;
+  segment_end_index   = end_index - start_index;
+  if (top_buf_edge_index < 0){
+    segment_start_index = start_index;
+  }
+
   map = Map(my_map);
   InitializeMap();
 }
