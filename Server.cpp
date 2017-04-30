@@ -440,6 +440,11 @@ Actor SetTimeouts(Actor actor){
   return actor;
 }
 
+Actor PerformHandovers(Actor actor){
+  //TODO: Handover protocol send and receive
+  return actor;
+}
+
 Actor MoveActor(Actor actor){
   if(!actor.get_timeout()){
     Coordinate reset_coordinate;
@@ -447,6 +452,11 @@ Actor MoveActor(Actor actor){
     actor.set_next_move(reset_coordinate);
   }
   return actor;
+}
+
+void UpdateBuffers(){
+  //TODO: Buffer protocol send and receive
+  return;
 }
 
 Actor DetectCollision(Actor actor){
@@ -598,7 +608,9 @@ void *MapManager(void *args){
   while(1){
     IterateCurrentActors(&PrintActor);
     IterateCurrentActors(&SetTimeouts);
+    IterateCurrentActors(&PerformHandovers);
     IterateCurrentActors(&MoveActor);
+    UpdateBuffers();
     IterateCurrentActors(&DetectCollision);
     IterateCurrentActors(&CheckDestination);
     AddNewActors();
