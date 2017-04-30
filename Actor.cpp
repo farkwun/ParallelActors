@@ -7,13 +7,16 @@ Actor::Actor(){
   position    = coordinate;
   destination = coordinate;
   id          = "";
+  row_offset  = 0;
 }
 
-Actor::Actor(std::string id, Coordinate position, Coordinate destination){
+Actor::Actor(std::string id, Coordinate position, Coordinate destination, int row_offset){
   this->position    = position;
   this->destination = destination;
   this->id          = id;
+  this->row_offset  = row_offset;
 }
+
 
 Coordinate Actor::get_position(){
   return position;
@@ -25,6 +28,20 @@ Coordinate Actor::get_destination(){
 
 Coordinate Actor::get_next_move(){
   return next_move;
+}
+
+Coordinate Actor::get_true_position(){
+  Coordinate true_position;
+  true_position.set_row(position.get_row() + row_offset);
+  true_position.set_col(position.get_col());
+  return true_position;
+}
+
+Coordinate Actor::get_relative_destination(){
+  Coordinate relative_destination;
+  relative_destination.set_row(destination.get_row() - row_offset);
+  relative_destination.set_col(destination.get_col());
+  return relative_destination;
 }
 
 bool Actor::get_collided(){

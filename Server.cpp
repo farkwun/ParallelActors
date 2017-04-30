@@ -55,6 +55,7 @@ std::set<std::string> new_actors;
 std::set<std::string> dead_actors;
 
 Map map;
+Map original_map;
 
 sf::RenderWindow * map_window;
 int border_size = 100;
@@ -75,6 +76,8 @@ static const int MAP_TAG = 1;
 char forwardBuff[BUFLEN];
 
 std::unordered_map<std::string, struct sockaddr_in> routing_table;
+
+int my_offset;
 
 // MPI Funcs
 void MPISend(char * data, int length, MPI_Datatype type, int id, int tag);
@@ -172,8 +175,11 @@ void UpdateActorMove(char * PDU){
   }
   actor->set_timeout(false);
 
-  new_move.set_row(StoI(GetField(MOVE_NEXT_ROW_INDEX, PDU, MOVE_FIELD_LEN)));
-  new_move.set_col(StoI(GetField(MOVE_NEXT_COL_INDEX, PDU, MOVE_FIELD_LEN)));
+  new_move.set_row(StoI(
+        GetField(MOVE_NEXT_ROW_INDEX, PDU, MOVE_FIELD_LEN)) - my_offset);
+
+  new_move.set_col(StoI(
+        GetField(MOVE_NEXT_COL_INDEX, PDU, MOVE_FIELD_LEN)));
 
   actor->set_next_move(new_move);
 }
@@ -215,9 +221,9 @@ char * SetupPDU(Actor actor){
 
   sprintf(PDU + SETUP_STEP_INDEX,"%d",map.get_step_size());
 
-  sprintf(PDU + SETUP_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
+  sprintf(PDU + SETUP_CURR_ROW_INDEX,"%d",actor.get_true_position().get_row());
 
-  sprintf(PDU + SETUP_CURR_COL_INDEX,"%d",actor.get_position().get_col());
+  sprintf(PDU + SETUP_CURR_COL_INDEX,"%d",actor.get_true_position().get_col());
 
   sprintf(PDU + SETUP_DEST_ROW_INDEX,"%d",actor.get_destination().get_row());
 
@@ -249,9 +255,9 @@ char * VisionPDU(Actor actor){
   PDU[VISION_ARRIVED_INDEX]  = BooltoChar(actor.get_arrived());
   PDU[VISION_TIMEOUT_INDEX]  = BooltoChar(actor.get_timeout());
 
-  sprintf(PDU + VISION_CURR_ROW_INDEX,"%d",actor.get_position().get_row());
+  sprintf(PDU + VISION_CURR_ROW_INDEX,"%d",actor.get_true_position().get_row());
 
-  sprintf(PDU + VISION_CURR_COL_INDEX,"%d",actor.get_position().get_col());
+  sprintf(PDU + VISION_CURR_COL_INDEX,"%d",actor.get_true_position().get_col());
 
   for (int i = VISION_GRID_INDEX; i < VISION_GRID_INDEX + strlen(vision_grid); i++){
     PDU[i] = vision_grid[i-VISION_GRID_INDEX];
@@ -285,6 +291,13 @@ void InitializeMap(){
   map.InitializeActorDimensions();
   map.InitializeVision();
   map.InitializeStepSize();
+}
+
+void SetMaps(){
+  InitializeMap();
+
+  Map copy = map;
+  original_map = copy;
 }
 
 void LaunchWindow(){
@@ -322,8 +335,10 @@ void AddNewActors(){
   while(it != temp.end()){
     new_actor_id      = *it;
 
-    Actor new_actor(new_actor_id, map.RandomEmptyLocation(),
-        map.RandomDestination());
+    Coordinate start       = map.RandomEmptyLocation();
+    Coordinate destination = original_map.RandomDestination();
+
+    Actor new_actor(new_actor_id, start, destination, my_offset);
 
     map.AddActor(new_actor);
 
@@ -819,6 +834,12 @@ void GetMySegment(){
   segment_rows = my_map.size();
   segment_cols = my_map[0].size();
 
+  if (world_rank == 1){
+    my_offset = 0;
+  }else{
+    my_offset = start_index - top_buf_edge_index;
+  }
+
   if (debug) {
     printf("My rank is %d, my start index is %d, my end index is %d, my top_buf_edge is %d, and my bot_buf_edge is %d\n", world_rank, start_index, end_index, top_buf_edge_index, bot_buf_edge_index);
   }
@@ -840,7 +861,7 @@ void LaunchThreads(){
 }
 
 void run(){
-  InitializeMap();
+  SetMaps();
   SetRoleVars();
   LaunchThreads();
 }

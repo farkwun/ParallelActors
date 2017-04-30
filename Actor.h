@@ -24,10 +24,12 @@ class Actor {
     int row_offset;
   public:
     Actor();
-    Actor(std::string id, Coordinate position, Coordinate destination);
+    Actor(std::string id, Coordinate position, Coordinate destination, int row_offset);
     Coordinate get_position();
     Coordinate get_destination();
     Coordinate get_next_move();
+    Coordinate get_true_position();
+    Coordinate get_relative_destination();
     bool get_collided();
     bool get_arrived();
     bool get_invalid_move();

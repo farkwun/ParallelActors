@@ -320,7 +320,7 @@ bool Map::AtDestination(Actor actor){
   Coordinate position, destination;
 
   position    = actor.get_position();
-  destination = actor.get_destination();
+  destination = actor.get_relative_destination();
 
   actor_row = position.get_row();
   actor_col = position.get_col();
