@@ -592,7 +592,8 @@ void MPISend(int * data, int length, MPI_Datatype type, int id, int tag){
 }
 
 int RandomRank(){
-  return (1 + (rand() % (world_size - 1)));
+  int random_rank = (1 + (rand() % (world_size - 1)));
+  return random_rank;
 }
 
 int DerivedRank(char * PDU){
@@ -602,7 +603,9 @@ int DerivedRank(char * PDU){
   int derived_rank = current_row/segment_size;
 
   // map machines begin at rank 1, not 0
-  return (derived_rank + 1);
+  derived_rank += 1;
+
+  return derived_rank;
 }
 
 void ParseMPIRecv(){
