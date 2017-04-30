@@ -71,8 +71,9 @@ int bot_buf_edge_index = -1;
 int start_index, end_index;
 bool root = false;
 static const int root_id = 0;
-static const int DEFAULT_TAG = 0;
-static const int MAP_TAG = 1;
+static const int DEFAULT_TAG  = 0;
+static const int MAP_TAG      = 1;
+static const int HANDOVER_TAG = 2;
 char forwardBuff[BUFLEN];
 
 std::unordered_map<std::string, struct sockaddr_in> routing_table;
@@ -285,6 +286,36 @@ char * ForwardPDU(char * PDU){
   memcpy(forwardPDU, PDU, BUFLEN);
 
   return forwardPDU;
+}
+
+char * HandoverPDU(Actor actor){
+  char * PDU;
+  PDU = (char *) malloc(BUFLEN);
+
+  // fill PDU with null characters
+  for (int i = 0; i < BUFLEN; i++){
+    PDU[i] = '\0';
+  }
+
+  PDU[PDU_TYPE_INDEX] = HANDOVER;
+  strncpy(PDU + PDU_ID_INDEX, actor.get_id().c_str(), ID_LEN);
+
+  sprintf(PDU + HANDOVER_DEST_ROW_INDEX,"%d",
+      actor.get_next_move().get_row() + my_offset);
+
+  sprintf(PDU + HANDOVER_DEST_COL_INDEX,"%d",
+      actor.get_true_position().get_col());
+
+  return PDU;
+}
+
+char * NoPDU(){
+  char * PDU;
+  PDU = (char *) malloc(BUFLEN);
+
+  PDU[PDU_TYPE_INDEX] = NOP;
+
+  return PDU;
 }
 
 void InitializeMap(){

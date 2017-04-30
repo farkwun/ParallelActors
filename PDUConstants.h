@@ -3,12 +3,13 @@
 #ifndef PDUCONSTANTS_H
 #define PDUCONSTANTS_H
 
-const static int BUFLEN           = 1024;
-const static int ID_LEN           = 10;
-const static int DATALEN          = 1013;
-const static int SETUP_FIELD_LEN  = 10;
-const static int VISION_FIELD_LEN = 10;
-const static int MOVE_FIELD_LEN   = 10;
+const static int BUFLEN             = 1024;
+const static int ID_LEN             = 10;
+const static int DATALEN            = 1013;
+const static int SETUP_FIELD_LEN    = 10;
+const static int VISION_FIELD_LEN   = 10;
+const static int MOVE_FIELD_LEN     = 10;
+const static int HANDOVER_FIELD_LEN = 10;
 
 const static char REGISTER    = 'R';
 const static char SETUP       = 'S';
@@ -16,6 +17,8 @@ const static char VISION      = 'V';
 const static char MOVEMENT    = 'M';
 const static char ACKNOWLEDGE = 'A';
 const static char ERROR       = 'E';
+const static char HANDOVER    = 'H';
+const static char NOP         = '0';
 const static char TRUE        = 'X';
 const static char FALSE       = 'Z';
 
@@ -44,5 +47,8 @@ const static int MOVE_SEQ_INDEX = 11;
 const static int MOVE_NEXT_ROW_INDEX = 12;
 const static int MOVE_NEXT_COL_INDEX = 22;
 const static int MOVE_CURR_ROW_INDEX = 32;
+
+const static int HANDOVER_DEST_ROW_INDEX = 11;
+const static int HANDOVER_DEST_COL_INDEX = 21;
 
 #endif /* PDUCONSTANTS_H */
