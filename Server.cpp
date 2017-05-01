@@ -26,6 +26,7 @@
 #include <mpi.h>
 #include <set>
 #include <mutex>
+#include <queue>
 
 bool debug   = false;
 bool gui     = true;
@@ -76,10 +77,14 @@ static const int DEFAULT_TAG  = 0;
 static const int MAP_TAG      = 1;
 static const int HANDOVER_TAG = 2;
 char forwardBuff[BUFLEN];
+char handoverBuff[BUFLEN];
 
 std::unordered_map<std::string, struct sockaddr_in> routing_table;
 
 int my_offset;
+
+std::queue<Actor> top_emigrants;
+std::queue<Actor> bot_emigrants;
 
 // MPI Funcs
 void MPISend(char * data, int length, MPI_Datatype type, int id, int tag);
@@ -90,6 +95,7 @@ int RandomRank();
 int DerivedRank(char * PDU);
 void DisplayMap();
 std::vector< std::vector<char> > GatherSegments();
+void CheckEmigration(Actor * actor);
 
 // Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
 const float zoomAmount{ 1.1f }; // zoom by 10%
@@ -184,6 +190,8 @@ void UpdateActorMove(char * PDU){
         GetField(MOVE_NEXT_COL_INDEX, PDU, MOVE_FIELD_LEN)));
 
   actor->set_next_move(new_move);
+
+  CheckEmigration(actor);
 }
 
 void RegisterNewActor(char * PDU){
@@ -301,11 +309,23 @@ char * HandoverPDU(Actor actor){
   PDU[PDU_TYPE_INDEX] = HANDOVER;
   strncpy(PDU + PDU_ID_INDEX, actor.get_id().c_str(), ID_LEN);
 
+  sprintf(PDU + HANDOVER_CURR_ROW_INDEX,"%d",
+      actor.get_true_position().get_row());
+
+  sprintf(PDU + HANDOVER_CURR_COL_INDEX,"%d",
+      actor.get_position().get_col());
+
   sprintf(PDU + HANDOVER_DEST_ROW_INDEX,"%d",
-      actor.get_next_move().get_row() + my_offset);
+      actor.get_destination().get_row());
 
   sprintf(PDU + HANDOVER_DEST_COL_INDEX,"%d",
-      actor.get_true_position().get_col());
+      actor.get_destination().get_col());
+
+  sprintf(PDU + HANDOVER_NXMV_ROW_INDEX,"%d",
+      actor.get_next_move().get_row() + my_offset);
+
+  sprintf(PDU + HANDOVER_NXMV_COL_INDEX,"%d",
+      actor.get_next_move().get_col());
 
   return PDU;
 }
@@ -442,9 +462,119 @@ Actor SetTimeouts(Actor actor){
   return actor;
 }
 
-Actor PerformHandovers(Actor actor){
-  //TODO: Handover protocol send and receive
-  return actor;
+bool ExitingUp(Coordinate move){
+  return ((world_rank != 1) && (move.get_row() < top_buf_edge_index));
+}
+
+bool ExitingDown(Coordinate move){
+  return ((world_rank < world_size - 1) && (move.get_row() > bot_buf_edge_index));
+}
+
+bool NotExiting(Coordinate move){
+  return (!ExitingUp(move) && !ExitingDown(move));
+}
+
+void CheckEmigration(Actor * actor){
+  Coordinate move = actor->get_next_move();
+
+  if (NotExiting(move)){
+    return;
+  }
+
+  if (ExitingDown(move)){
+    bot_emigrants.push(*actor);
+  } else if (ExitingUp(move)){
+    top_emigrants.push(*actor);
+  }
+}
+
+void HandOver(int rank){
+  if (rank == 0 || rank == world_size){
+    return;
+  }
+
+  std::queue<Actor> * q;
+  Actor emigrant;
+
+  if (rank == world_rank){
+    std::cout << "Cannot handover to self!" << std::endl;
+    return;
+  }
+
+  if (rank < world_rank){
+    q = &top_emigrants;
+  }
+
+  if (rank > world_rank){
+    q = &bot_emigrants;
+  }
+
+  while(!q->empty()){
+    emigrant = q->front();
+    MPISend(HandoverPDU(emigrant), BUFLEN,
+        MPI_CHAR, rank, HANDOVER_TAG);
+    map.ClearActor(emigrant);
+    current_actors.erase(emigrant.get_id());
+    q->pop();
+  }
+
+  MPISend(NoPDU(), BUFLEN,
+      MPI_CHAR, rank, HANDOVER_TAG);
+}
+
+void RecvFromID(int rank){
+  if (rank == 0 || rank == world_size){
+    return;
+  }
+
+  std::string actor_id;
+  Coordinate position;
+  Coordinate destination;
+  Coordinate next_move;
+
+  while(1){
+    MPIReceive(handoverBuff, BUFLEN, MPI_CHAR,
+        rank, HANDOVER_TAG);
+
+    PDU_TYPE = handoverBuff[PDU_TYPE_INDEX];
+
+    switch(PDU_TYPE){
+      case HANDOVER :
+        {
+          actor_id = GetField(PDU_ID_INDEX, handoverBuff, ID_LEN);
+          position.set_row(StoI(GetField(HANDOVER_CURR_ROW_INDEX,
+                  handoverBuff, HANDOVER_FIELD_LEN)) - my_offset);
+          position.set_col(StoI(GetField(HANDOVER_CURR_COL_INDEX,
+                  handoverBuff, HANDOVER_FIELD_LEN)));
+          next_move.set_row(StoI(GetField(HANDOVER_NXMV_ROW_INDEX,
+                  handoverBuff, HANDOVER_FIELD_LEN)) - my_offset);
+          next_move.set_col(StoI(GetField(HANDOVER_NXMV_COL_INDEX,
+                  handoverBuff, HANDOVER_FIELD_LEN)));
+          destination.set_row(StoI(GetField(HANDOVER_DEST_ROW_INDEX,
+                  handoverBuff, HANDOVER_FIELD_LEN)));
+          destination.set_col(StoI(GetField(HANDOVER_DEST_COL_INDEX,
+                  handoverBuff, HANDOVER_FIELD_LEN)));
+          Actor new_actor(actor_id, position, destination, my_offset);
+          new_actor.set_next_move(next_move);
+          current_actors[actor_id] = new_actor;
+          break;
+        }
+      case NOP :
+        return;
+    }
+  }
+}
+
+void PerformHandovers(){
+  //Handover to segment below
+  HandOver(world_rank + 1);
+  //Receive above handovers
+  RecvFromID(world_rank - 1);
+  //Handover to segment above
+  HandOver(world_rank - 1);
+  //Receive below handovers
+  RecvFromID(world_rank + 1);
+  return;
 }
 
 Actor MoveActor(Actor actor){
@@ -605,7 +735,7 @@ void *MapManager(void *args){
   while(1){
     IterateCurrentActors(&PrintActor);
     IterateCurrentActors(&SetTimeouts);
-    IterateCurrentActors(&PerformHandovers);
+    PerformHandovers();
     IterateCurrentActors(&MoveActor);
     UpdateBuffers();
     IterateCurrentActors(&DetectCollision);
@@ -841,7 +971,7 @@ void GetMySegment(){
   end_index = (world_rank) * segment_size - 1;
 
   std::vector< std::vector<char> > my_map;
-  std::vector<char> empty_row(map_cols, '0');
+  std::vector<char> empty_row(map_cols, kEmpty);
 
   int i,j,k;
 
