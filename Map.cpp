@@ -53,8 +53,6 @@ std::vector<int> Map::Compress2DVectorTo1D(int start_ind, int end_ind, std::vect
     compressed.push_back(current_value);
     compressed.push_back(DELIM);
   }
-  compressed.push_back(current_count);
-  compressed.push_back(current_value);
   return compressed;
 }
 
@@ -378,6 +376,52 @@ std::vector< std::vector<char> > Map::GetSurroundings(Coordinate coordinate){
   return vision_grid;
 }
 
+int LogicalType(char constant){
+  switch(constant){
+    case kEmpty    :
+      return 0;
+    case kActor    :
+      return 1;
+    case kObstacle :
+      return 4;
+  }
+  return 10;
+}
+
+
+void Map::UpdateMapWithSegment(int start_row, std::vector< std::vector<char> > segment){
+  int i, j;
+  int seg_rows = segment.size();
+  int seg_cols = segment[0].size();
+  int a, b, c;
+  for (i = start_row; i < start_row + seg_rows; i++){
+    for (j = 0; j < seg_cols; j++){
+      a = LogicalType(map[i][j]);
+      b = LogicalType(segment[i - start_row][j]);
+
+      c = a + b;
+
+      if (c > 2){
+        map[i][j] = kObstacle;
+      }else if (c == 2)  {
+        map[i][j] = kCollision;
+      }else if (c == 1){
+        map[i][j] = kActor;
+      }else if (c == 0) {
+        map[i][j] = kEmpty;
+      }
+    }
+  }
+}
+
+void Map::ClearRows(int start_row, int end_row){
+  int i, j;
+  std::vector<char> empty_row(map_cols, kEmpty);
+
+  for (i = start_row; i <= end_row; i++){
+    map[i] = empty_row;
+  }
+}
 
 bool Map::out_of_bounds(int row, int col){
   bool out_of_bounds = false;

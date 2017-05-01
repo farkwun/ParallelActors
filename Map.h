@@ -76,6 +76,8 @@ class Map {
     Actor CheckCollision(Actor actor);
     bool AtDestination(Actor actor);
     std::vector< std::vector<char> > GetSurroundings(Coordinate coordinate);
+    void UpdateMapWithSegment(int start_row, std::vector< std::vector<char> > segment);
+    void ClearRows(int start_row, int end_row);
     bool out_of_bounds(int row, int col);
     Coordinate RandomEmptyLocation();
     Coordinate RandomDestination();

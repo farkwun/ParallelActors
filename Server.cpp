@@ -76,6 +76,7 @@ static const int root_id = 0;
 static const int DEFAULT_TAG  = 0;
 static const int MAP_TAG      = 1;
 static const int HANDOVER_TAG = 2;
+static const int BUF_TAG   = 3;
 char forwardBuff[BUFLEN];
 char handoverBuff[BUFLEN];
 
@@ -85,6 +86,11 @@ int my_offset;
 
 std::queue<Actor> top_emigrants;
 std::queue<Actor> bot_emigrants;
+
+std::vector< std::vector<char> > top_recv_buffer;
+std::vector< std::vector<char> > bot_recv_buffer;
+std::vector< std::vector<char> > top_send_buffer;
+std::vector< std::vector<char> > bot_send_buffer;
 
 // MPI Funcs
 void MPISend(char * data, int length, MPI_Datatype type, int id, int tag);
@@ -96,6 +102,7 @@ int DerivedRank(char * PDU);
 void DisplayMap();
 std::vector< std::vector<char> > GatherSegments();
 void CheckEmigration(Actor * actor);
+std::vector<char> DecompressRow(std::vector<int> compress_row);
 
 // Sourced from https://github.com/SFML/SFML/wiki/Source:-Zoom-View-At-(specified-pixel)
 const float zoomAmount{ 1.1f }; // zoom by 10%
@@ -566,6 +573,9 @@ void RecvFromID(int rank){
 }
 
 void PerformHandovers(){
+  if (world_size == 2){
+    return;
+  }
   //Handover to segment below
   HandOver(world_rank + 1);
   //Receive above handovers
@@ -586,8 +596,131 @@ Actor MoveActor(Actor actor){
   return actor;
 }
 
+void ClearMapBuffers(){
+  if (world_size == 2){
+    return;
+  }
+  top_send_buffer.clear();
+  bot_send_buffer.clear();
+  top_recv_buffer.clear();
+  bot_recv_buffer.clear();
+
+  int clear_radius = map.get_vision_radius();
+
+  if (world_rank == 1){
+    map.ClearRows((bot_buf_edge_index - clear_radius) + 1, map.get_map_rows() - 1);
+    return;
+  }
+
+  if (world_rank == world_size - 1){
+    map.ClearRows(0, ((top_buf_edge_index + clear_radius) - 1));
+    return;
+  }
+
+  map.ClearRows(0, ((top_buf_edge_index + clear_radius) - 1));
+  map.ClearRows((bot_buf_edge_index - clear_radius) + 1, map.get_map_rows()- 1);
+}
+
+void LoadTopSendBuffer(std::vector< std::vector<char> > temp){
+  if (world_rank == 1){
+    return;
+  }
+  int i;
+  for (i = top_buf_edge_index - map.get_vision_radius(); i < top_buf_edge_index + map.get_vision_radius(); i++){
+    top_send_buffer.push_back(temp[i]);
+  }
+}
+
+void LoadBotSendBuffer(std::vector< std::vector<char> > temp){
+  if (world_rank == world_size - 1){
+    return;
+  }
+  int i;
+  for (i = bot_buf_edge_index - map.get_vision_radius(); i < bot_buf_edge_index + map.get_vision_radius(); i++){
+    bot_send_buffer.push_back(temp[i]);
+  }
+}
+
+void LoadOutgoingBuffers(){
+  std::vector< std::vector<char> > temp;
+  temp = map.get_map();
+  LoadTopSendBuffer(temp);
+  LoadBotSendBuffer(temp);
+}
+
+void SendBufferTo(int rank, std::vector< std::vector<char> > buffer){
+  if (rank == 0 || rank == world_size){
+    return;
+  }
+  std::vector<int> send = map.Compress2DVectorTo1D(0, buffer.size() - 1, buffer);
+  MPI_Send(&send.front(), send.size(), MPI_INT, rank, BUF_TAG, MPI_COMM_WORLD);
+}
+
+void ReceiveBufferFrom(int rank, std::vector< std::vector<char> > buffer){
+  if (rank == 0 || rank == world_size){
+    return;
+  }
+
+  int i, amount;
+  std::vector< std::vector<int> > compressed_map;
+  int * received_vector;
+  MPI_Status status;
+
+  received_vector = NULL;
+  MPI_Probe(rank, BUF_TAG, MPI_COMM_WORLD, &status);
+  MPI_Get_count(&status, MPI_INT, &amount);
+  received_vector = (int *) malloc (sizeof(int) * amount);
+  MPIReceive(received_vector, amount, MPI_INT, rank, BUF_TAG);
+  std::vector<int> data(received_vector, received_vector + amount);
+  compressed_map.push_back(data);
+  free(received_vector);
+
+  std::vector<int> temp;
+  for (int i = 0; i < compressed_map.size(); i++)
+  {
+    for (int j = 0; j < compressed_map[i].size(); j++)
+    {
+      if (compressed_map[i][j] == map.DELIM){
+        buffer.push_back(DecompressRow(temp));
+        temp.clear();
+      }else{
+        temp.push_back(compressed_map[i][j]);
+      }
+    }
+  }
+
+  if (rank > world_rank){
+    bot_recv_buffer = buffer;
+  }
+
+  if (rank < world_rank){
+    top_recv_buffer = buffer;
+  }
+}
+
+void FillMapBuffers(){
+  int size;
+  if (!top_recv_buffer.empty()){
+    size = top_recv_buffer.size();
+    map.UpdateMapWithSegment(0, top_recv_buffer);
+  }
+
+  if (!bot_recv_buffer.empty()){
+    size = bot_recv_buffer.size();
+    map.UpdateMapWithSegment(map.get_map_rows() - size, bot_recv_buffer);
+  }
+}
+
 void UpdateBuffers(){
-  //TODO: Buffer protocol send and receive
+  if (world_size == 2){
+    return;
+  }
+  LoadOutgoingBuffers();
+  SendBufferTo(world_rank + 1, bot_send_buffer);
+  ReceiveBufferFrom(world_rank - 1, top_recv_buffer);
+  SendBufferTo(world_rank - 1, top_send_buffer);
+  ReceiveBufferFrom(world_rank + 1, bot_recv_buffer);
+  FillMapBuffers();
   return;
 }
 
@@ -725,7 +858,27 @@ void SendPixels(){
     return;
   }
 
-  std::vector<int> send = map.Compress2DVectorTo1D(segment_start_index, segment_end_index, map.get_map());
+  std::vector<int> send;
+
+  if (world_rank == 1){
+    if(debug){
+      printf("I'm rank %d, I am sending pixels from row %d to %d\n",
+          world_rank, 0, segment_end_index);
+    }
+    send = map.Compress2DVectorTo1D(0, segment_end_index, map.get_map());
+  }else if (world_rank == world_size - 1){
+    if(debug){
+      printf("I'm rank %d, I am sending pixels from row %d to %d\n",
+          world_rank, segment_start_index, map.get_map_rows()-1);
+    }
+    send = map.Compress2DVectorTo1D(segment_start_index, map.get_map_rows() - 1, map.get_map());
+  }else{
+    if(debug){
+      printf("I'm rank %d, I am sending pixels from row %d to %d\n",
+          world_rank, segment_start_index, bot_buf_edge_index);
+    }
+    send = map.Compress2DVectorTo1D(segment_start_index, bot_buf_edge_index, map.get_map());
+  }
 
   MPI_Send(&send.front(), send.size(), MPI_INT, 0, MAP_TAG, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -736,6 +889,7 @@ void *MapManager(void *args){
     IterateCurrentActors(&PrintActor);
     IterateCurrentActors(&SetTimeouts);
     PerformHandovers();
+    ClearMapBuffers();
     IterateCurrentActors(&MoveActor);
     UpdateBuffers();
     IterateCurrentActors(&DetectCollision);
@@ -754,6 +908,10 @@ void MPI_Initialize(){
 
   // Get the rank of the process
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  if (world_size == 1 ){
+    std::cout << "This branch should only be used if parallelizing. You have chosen a world_size of 1. If you would like to compare performance given a non-MPICH linear server, please use the appropriate branch." << std::endl;
+    exit(0);
+  }
 }
 
 void MPIReceive(char * buffer, int length, MPI_Datatype type,  int id, int tag){
@@ -917,6 +1075,9 @@ std::vector< std::vector<char> > GatherSegments(){
         temp.push_back(compressed_map[i][j]);
       }
     }
+  }
+  if (debug) {
+    printf("The gathered map has  %d rows\n", new_map.size());
   }
   return new_map;
 }
