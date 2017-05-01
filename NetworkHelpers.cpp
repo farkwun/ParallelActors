@@ -28,6 +28,8 @@ void Register(char * PDU);
 void Setup(char * PDU);
 void Vision(char * PDU);
 void Movement(char * PDU);
+void Handover(char * PDU);
+void Nop(char * PDU);
 void Default(char * PDU);
 
 void PrintPDU(char * PDU){
@@ -44,6 +46,12 @@ void PrintPDU(char * PDU){
       break;
     case MOVEMENT :
       Print(&Movement, PDU);
+      break;
+    case HANDOVER:
+      Print(&Handover, PDU);
+      break;
+    case NOP :
+      Print(&Nop, PDU);
       break;
     default  :
       Print(&Default, PDU);
@@ -99,6 +107,22 @@ void Movement(char * PDU){
   std::cout << "MOVE TO ROW : " << GetField(MOVE_NEXT_ROW_INDEX, PDU, len)  << std::endl;
   std::cout << "MOVE TO COL : " << GetField(MOVE_NEXT_COL_INDEX, PDU, len)  << std::endl;
   std::cout << "CURRENT ROW : " << GetField(MOVE_CURR_ROW_INDEX, PDU, len)  << std::endl;
+}
+
+void Handover(char * PDU){
+  int len = HANDOVER_FIELD_LEN;
+  std::cout << "HANDOVER PACKET!" << std::endl;
+  std::cout << "ACTOR ID    : " << GetField(PDU_ID_INDEX, PDU, ID_LEN) << std::endl;
+  std::cout << "CURRENT ROW : " << GetField(HANDOVER_CURR_ROW_INDEX, PDU, len)  << std::endl;
+  std::cout << "CURRENT COL : " << GetField(HANDOVER_CURR_COL_INDEX, PDU, len)  << std::endl;
+  std::cout << "DEST    ROW : " << GetField(HANDOVER_DEST_ROW_INDEX, PDU, len)  << std::endl;
+  std::cout << "DEST    COL : " << GetField(HANDOVER_DEST_COL_INDEX, PDU, len)  << std::endl;
+  std::cout << "MOVE TO ROW : " << GetField(HANDOVER_NXMV_ROW_INDEX, PDU, len)  << std::endl;
+  std::cout << "MOVE TO COL : " << GetField(HANDOVER_NXMV_COL_INDEX, PDU, len)  << std::endl;
+}
+
+void Nop(char * PDU){
+  std::cout << "NO OP PACKET!" << std::endl;
 }
 
 void Default(char * PDU){

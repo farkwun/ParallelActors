@@ -48,7 +48,11 @@ const static int MOVE_NEXT_ROW_INDEX = 12;
 const static int MOVE_NEXT_COL_INDEX = 22;
 const static int MOVE_CURR_ROW_INDEX = 32;
 
-const static int HANDOVER_DEST_ROW_INDEX = 11;
-const static int HANDOVER_DEST_COL_INDEX = 21;
+const static int HANDOVER_CURR_ROW_INDEX = 11;
+const static int HANDOVER_CURR_COL_INDEX = 21;
+const static int HANDOVER_DEST_ROW_INDEX = 31;
+const static int HANDOVER_DEST_COL_INDEX = 41;
+const static int HANDOVER_NXMV_ROW_INDEX = 51;
+const static int HANDOVER_NXMV_COL_INDEX = 61;
 
 #endif /* PDUCONSTANTS_H */
