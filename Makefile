@@ -20,13 +20,13 @@ Model.o: Model.h Model.cpp
 	${CPP} -c ${CFLAGS} Model.h Model.cpp
 
 NeuralNet.o: NeuralNet.h NeuralNet.cpp
-	${CPP} -c ${CFLAGS} NeuralNet.h NeuralNet.cpp
+	${CPP} -c ${CFLAGS} Model.cpp NeuralNet.h NeuralNet.cpp
 
 server: Server.cpp
 	${CPP} NetworkHelpers.cpp Server.cpp Map.cpp Actor.cpp Coordinate.cpp -o server ${CFLAGS} ${SFMLFLAGS} -pthread
 
 client: Client.cpp
-	${CPP} ${CFLAGS} ${ARMAFLAGS} NeuralNet.cpp NetworkHelpers.cpp Coordinate.cpp Client.cpp -o client
+	${CPP} ${CFLAGS} ${ARMAFLAGS} Model.cpp NeuralNet.cpp NetworkHelpers.cpp Coordinate.cpp Client.cpp -o client
 
 clean:
 	-rm -f ${TARGETS}
