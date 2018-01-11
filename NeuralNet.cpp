@@ -4,10 +4,12 @@
 
 NeuralNet::NeuralNet(int input_layer_size){
   arma::arma_rng::set_seed_random();
+  // generate hidden layer weights
   for (int i = 0; i < hidden_layers; i++){
     arma::Mat<double> temp = arma::randu(input_layer_size+1, input_layer_size);
     weights.push_back (temp);
   }
+  // generate output layer weights
     arma::Mat<double> temp = arma::randu(input_layer_size+1, output_nodes);
     weights.push_back (temp);
 }
@@ -19,9 +21,9 @@ NeuralNet::NeuralNet(const NeuralNet& parent){
   arma::Mat<double> temp;
   for (int i = 0; i < weights.size(); i++){
     temp = weights[i];
-    arma::Mat<double> mutate = arma::randu(temp.n_rows, temp.n_cols);
-    mutate.transform( [range](double val) { return ((val * range) - mutation_coefficient); } );
-    weights[i] = weights[i] + mutate;
+    arma::Mat<double> mutation = arma::randu(temp.n_rows, temp.n_cols);
+    mutation.transform( [range](double val) { return ((val * range) - mutation_coefficient); } );
+    weights[i] = weights[i] + mutation;
   }
 }
 
@@ -34,8 +36,10 @@ int NeuralNet::GetMove(std::vector<int> input){
   arma::Mat<double> temp_layer = arma::rowvec(inputvec);
 
   for (int i = 0; i < weights.size(); i++){
+    // adding bias term
     temp_layer.insert_cols(temp_layer.n_cols, 1);
     temp_layer = temp_layer * weights[i];
+    // applying fast sigmoid
     temp_layer = temp_layer.transform( [](double val) { return (val/(1+fabs(val))); } );
   }
 
