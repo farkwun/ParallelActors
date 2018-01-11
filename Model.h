@@ -14,7 +14,7 @@ class Model{
   private:
     double score;
   public:
-    double get_score();
+    double get_score() const;
     void set_score(double new_score);
     virtual int GetMove(std::vector<int> input);
 };

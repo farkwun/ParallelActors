@@ -1,6 +1,6 @@
 #include "Model.h"
 
-double Model::get_score(){
+double Model::get_score() const{
   return score;
 }
 
